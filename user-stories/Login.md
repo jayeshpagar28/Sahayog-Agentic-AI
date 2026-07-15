@@ -1,13 +1,9 @@
 SAHAYOG Web Portal
 Module 1 – Login
-Document Information
-Item	Details
-Module	Login
-Application	SAHAYOG Web Portal
-Automation Target	Playwright + TypeScript
-Design Pattern	Page Object Model
-Priority	High
-Automation Type	Smoke + Regression
+http://14.142.238.28:8989/radheAgentWeb/login
+username - nayan.aher@netwinindia.in
+password - Sahayog@2025
+ 
 1. Module Overview
 The Login module is the entry point of the SAHAYOG Web Portal. It authenticates registered users and grants access to the dashboard after successful credential validation.
 

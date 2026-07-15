@@ -22,9 +22,10 @@ user-stories/EC-AUTH-LOGIN-001.md
 - Business objective in plain language
 
 ### 2. Application Context
-- Application URL(s)
-- Test credentials (email, password, roles if multiple)
-
+- Application URL : http://14.142.238.28:8989/radheAgentWeb/login
+- Valid Test credentials:
+* username - nayan.aher@netwinindia.in
+* Password - Sahayog@2025
 ### 3. Entities and Operations
 Identify every data entity mentioned.
 For each entity, identify which CRUD operations apply:
