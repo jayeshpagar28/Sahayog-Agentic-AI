@@ -1,0 +1,29 @@
+[2026-07-17T06:54:18.082Z] === Scenario 1: Blank submit (button disabled, no API call expected) ===
+[2026-07-17T06:54:21.171Z] REQUEST  POST http://14.142.238.28:8989/radheAosAPI/finco/logo/get/allLogo
+[2026-07-17T06:54:21.551Z] RESPONSE 200 POST http://14.142.238.28:8989/radheAosAPI/finco/logo/get/allLogo
+           body: [{"_id":"68e799f141654b21a7523825","scanDocImg":"iVBORw0KGgoAAAANSUhEUgAAC7gAAAu4CAYAAABxFfV5AAAABGdBTUEAALGOfPtRkwAAACBjSFJNAACHDwAAjA8AAP1SAACBQAAAfXkAAOmLAAA85QAAGcxzPIV3AAAKL2lDQ1BJQ0MgUHJvZmlsZQAASMedlndUVNcWh8+9d3qhzTDSGXqTLjCA9C4gHQRRGGYGGMoAwwxNbIioQEQREQFFkKCAAaOhSKyIYiEoqGAPSBBQYjCKqKhkRtZ
+[2026-07-17T06:54:21.647Z] REQUEST  GET http://14.142.238.29:8081/radheUserManagementAPI/common/ref/get/communication-mode
+[2026-07-17T06:54:21.801Z] RESPONSE 200 GET http://14.142.238.29:8081/radheUserManagementAPI/common/ref/get/communication-mode
+           body: {"communicationMode":"email"}
+[2026-07-17T06:54:21.852Z] === Scenario 2: Invalid email format (client-side block expected) ===
+[2026-07-17T06:54:23.089Z] === Scenario 3: Unregistered email (expect 4xx/error API response) ===
+[2026-07-17T06:54:23.247Z] REQUEST  POST http://14.142.238.29:8081/radheUserManagementAPI/common/ref/request/by-primary-contact
+[2026-07-17T06:54:23.338Z] RESPONSE 200 POST http://14.142.238.29:8081/radheUserManagementAPI/common/ref/request/by-primary-contact
+           body: {"resultVO":{"msgCode":"404","msgDescr":"User not found","isError":true,"success":"FALSE","procRefUuid":null,"error":true},"verificationFields":[{"code":"name","label":"Name of User","type":"text","input":"text","pattern":null,"required":true,"dateFormat":"","caseSensitive":false},{"code":"dob","lab
+[2026-07-17T06:54:25.338Z] === Scenario 4: Registered but rate-limited email (expect flagged response) ===
+[2026-07-17T06:54:25.772Z] REQUEST  POST http://14.142.238.28:8989/radheAosAPI/finco/logo/get/allLogo
+[2026-07-17T06:54:26.038Z] RESPONSE 200 POST http://14.142.238.28:8989/radheAosAPI/finco/logo/get/allLogo
+           body: [{"_id":"68e799f141654b21a7523825","scanDocImg":"iVBORw0KGgoAAAANSUhEUgAAC7gAAAu4CAYAAABxFfV5AAAABGdBTUEAALGOfPtRkwAAACBjSFJNAACHDwAAjA8AAP1SAACBQAAAfXkAAOmLAAA85QAAGcxzPIV3AAAKL2lDQ1BJQ0MgUHJvZmlsZQAASMedlndUVNcWh8+9d3qhzTDSGXqTLjCA9C4gHQRRGGYGGMoAwwxNbIioQEQREQFFkKCAAaOhSKyIYiEoqGAPSBBQYjCKqKhkRtZ
+[2026-07-17T06:54:26.105Z] REQUEST  GET http://14.142.238.29:8081/radheUserManagementAPI/common/ref/get/communication-mode
+[2026-07-17T06:54:26.242Z] RESPONSE 200 GET http://14.142.238.29:8081/radheUserManagementAPI/common/ref/get/communication-mode
+           body: {"communicationMode":"email"}
+[2026-07-17T06:54:26.467Z] REQUEST  POST http://14.142.238.29:8081/radheUserManagementAPI/common/ref/request/by-primary-contact
+[2026-07-17T06:54:26.503Z] RESPONSE 200 POST http://14.142.238.29:8081/radheUserManagementAPI/common/ref/request/by-primary-contact
+           body: {"resultVO":{"msgCode":"429","msgDescr":"Maximum reference ID requests exceeded. Please try again after 24 hours.","isError":true,"success":"FALSE","procRefUuid":null,"error":true},"verificationFields":[{"code":"name","label":"Name of User","type":"text","input":"text","pattern":null,"required":true
+[2026-07-17T06:54:29.579Z] === Scenario 5: SQL injection payload ===
+[2026-07-17T06:54:29.837Z] REQUEST  POST http://14.142.238.28:8989/radheAosAPI/finco/logo/get/allLogo
+[2026-07-17T06:54:30.086Z] RESPONSE 200 POST http://14.142.238.28:8989/radheAosAPI/finco/logo/get/allLogo
+           body: [{"_id":"68e799f141654b21a7523825","scanDocImg":"iVBORw0KGgoAAAANSUhEUgAAC7gAAAu4CAYAAABxFfV5AAAABGdBTUEAALGOfPtRkwAAACBjSFJNAACHDwAAjA8AAP1SAACBQAAAfXkAAOmLAAA85QAAGcxzPIV3AAAKL2lDQ1BJQ0MgUHJvZmlsZQAASMedlndUVNcWh8+9d3qhzTDSGXqTLjCA9C4gHQRRGGYGGMoAwwxNbIioQEQREQFFkKCAAaOhSKyIYiEoqGAPSBBQYjCKqKhkRtZ
+[2026-07-17T06:54:30.167Z] REQUEST  GET http://14.142.238.29:8081/radheUserManagementAPI/common/ref/get/communication-mode
+[2026-07-17T06:54:30.414Z] RESPONSE 200 GET http://14.142.238.29:8081/radheUserManagementAPI/common/ref/get/communication-mode
+           body: {"communicationMode":"email"}
