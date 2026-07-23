@@ -1,0 +1,9 @@
+[     205ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://14.142.238.28:8989/favicon.ico:0
+[     246ms] [WARNING] FCM not supported in this browser. @ http://14.142.238.28:8989/radheAgentWeb/static/js/main.e4f70e45.js:1
+[     246ms] [LOG] Token: null @ http://14.142.238.28:8989/radheAgentWeb/static/js/main.e4f70e45.js:1
+[     247ms] [WARNING] FCM not supported in this browser. @ http://14.142.238.28:8989/radheAgentWeb/static/js/main.e4f70e45.js:1
+[     247ms] [LOG] Token: null @ http://14.142.238.28:8989/radheAgentWeb/static/js/main.e4f70e45.js:1
+[     247ms] [WARNING] FCM not supported in this browser. @ http://14.142.238.28:8989/radheAgentWeb/static/js/main.e4f70e45.js:1
+[     247ms] [LOG] Message received:  null @ http://14.142.238.28:8989/radheAgentWeb/static/js/main.e4f70e45.js:1
+[     247ms] [LOG] Failed to receive message:  TypeError: Cannot read properties of null (reading 'notification')
+    at http://14.142.238.28:8989/radheAgentWeb/static/js/main.e4f70e45.js:2:6855614 @ http://14.142.238.28:8989/radheAgentWeb/static/js/main.e4f70e45.js:1

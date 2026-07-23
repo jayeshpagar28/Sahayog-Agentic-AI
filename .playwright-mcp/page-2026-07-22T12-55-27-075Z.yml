@@ -1,0 +1,28 @@
+- main [ref=e9]:
+  - generic [ref=e843]:
+    - generic [ref=e1648]:
+      - img "Bank Logo" [ref=e1650]
+      - heading "Activate Your Account" [level=2] [ref=e1651]
+      - heading "Please enter the below details." [level=6] [ref=e1652]
+      - generic [ref=e1653]:
+        - generic [ref=e1654]:
+          - generic [ref=e1655]: Reference ID *
+          - textbox "Reference ID" [ref=e1657]
+        - generic [ref=e1658]:
+          - generic [ref=e1659]: User ID *
+          - textbox "User ID" [ref=e1661]
+        - generic [ref=e1662]:
+          - generic [ref=e1663]: Name of User *
+          - textbox "Name of User" [ref=e1665]
+        - generic [ref=e1666]:
+          - generic [ref=e1667]: Date of Birth *
+          - textbox [ref=e1668]
+        - generic [ref=e1669]:
+          - generic [ref=e1670]: Employee ID *
+          - textbox "Employee ID" [ref=e1672]
+        - generic [ref=e1673]:
+          - generic [ref=e1674]: Mobile No. *
+          - textbox "Mobile No." [ref=e1675]
+        - button "Submit" [disabled] [ref=e1676]
+        - button "Cancel" [ref=e1677] [cursor=pointer]
+    - img "Netwin Logo" [ref=e1682]

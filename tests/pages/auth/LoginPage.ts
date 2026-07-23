@@ -70,6 +70,10 @@ export class LoginPage {
     await this.forgotUserIdLink.click();
   }
 
+  async clickActivateAccount(): Promise<void> {
+    await this.activateAccountLink.click();
+  }
+
   async verifyLoginPageLoaded(): Promise<void> {
     await expect(this.page).toHaveURL(/\/radheAgentWeb\/login/);
     await expect(this.logo).toBeVisible();

@@ -1,0 +1,19 @@
+- main [ref=f2e9]:
+  - generic [ref=f2e1685]:
+    - generic [ref=f2e2490]:
+      - img "Bank Logo" [ref=f2e2492]
+      - heading "Let’s You Sign In!" [level=2] [ref=f2e2493]
+      - generic [ref=f2e2494]:
+        - generic [ref=f2e2495]:
+          - generic [ref=f2e2496]: User Id
+          - textbox "User Id" [ref=f2e2498]
+        - generic [ref=f2e2499]: Forgot User ID ?
+        - generic [ref=f2e2500]:
+          - generic [ref=f2e2501]: Password
+          - generic [ref=f2e2502]:
+            - textbox "Password" [ref=f2e2503]
+            - generic: 
+        - generic [ref=f2e2505]: Forgot Password ?
+        - button "Login" [ref=f2e2506] [cursor=pointer]
+        - generic [ref=f2e2507]: Activate Account
+    - img "Netwin Logo" [ref=f2e2513]

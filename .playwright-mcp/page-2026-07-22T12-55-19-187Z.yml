@@ -1,0 +1,18 @@
+- main [ref=e9]:
+  - generic [ref=e12]:
+    - generic [ref=e817]:
+      - heading "Let’s You Sign In!" [level=2] [ref=e818]
+      - generic [ref=e819]:
+        - generic [ref=e820]:
+          - generic [ref=e821]: User Id
+          - textbox "User Id" [ref=e823]
+        - generic [ref=e824]: Forgot User ID ?
+        - generic [ref=e825]:
+          - generic [ref=e826]: Password
+          - generic [ref=e827]:
+            - textbox "Password" [ref=e828]
+            - generic: 
+        - generic [ref=e830]: Forgot Password ?
+        - button "Login" [ref=e831] [cursor=pointer]
+        - generic [ref=e832]: Activate Account
+    - img "Netwin Logo" [ref=e838]
