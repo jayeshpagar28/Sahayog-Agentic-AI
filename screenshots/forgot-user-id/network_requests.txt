@@ -27,3 +27,11 @@
 [2026-07-17T06:54:30.167Z] REQUEST  GET http://14.142.238.29:8081/radheUserManagementAPI/common/ref/get/communication-mode
 [2026-07-17T06:54:30.414Z] RESPONSE 200 GET http://14.142.238.29:8081/radheUserManagementAPI/common/ref/get/communication-mode
            body: {"communicationMode":"email"}
+
+[2026-07-22T13:27:55.255Z] === Live happy-path verification, user-supplied real Reference ID + registered identity data ===
+[2026-07-22T13:27:59.628Z] RESPONSE 200 POST http://14.142.238.29:8081/radheUserManagementAPI/common/ref/request/by-primary-contact
+           body: {"resultVO":{"msgCode":"200","msgDescr":"Reference ID sent successfully","isError":false,"success":"TRUE","procRefUuid":null,"error":false},"verificationFields":[...]}
+[2026-07-22T13:34:08.871Z] RESPONSE 200 POST http://14.142.238.29:8081/radheUserManagementAPI/common/otp/request  <-- FLAGGED (BUG-004 + BUG-003)
+           body: {"requestUuid":null,"resultVO":{"msgCode":"400","msgDescr":"Verification failed: Please check the field errors","isError":true,"success":"FALSE","procRefUuid":null,"error":true},"nextTitle":null,"nextSubtitle":null,"otpResendTimeoutSeconds":null,"fieldErrors":[{"fieldCode":"name","fieldLabel":"Name of User","errorMessage":"Value does not match with records","errorType":"MISMATCH"}]}
+           Submitted: Reference ID=SAHA072220267263 (valid, accepted), Name of User="Nayan Aher" (user-confirmed correct, registered value), DOB=02-05-2001, Employee ID=EMP-1514, Mobile No.=9075063434
+           Note: HTTP 200 again despite isError:true — same status-code contract issue as BUG-003.

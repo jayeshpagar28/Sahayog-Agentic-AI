@@ -69,6 +69,26 @@ const rows = [
     'QA Comment': 'Found via direct network capture during FUI_TS001 exploratory pass (not caught by naive 4xx/5xx status filtering — had to inspect response bodies). Recommend the backend return proper 404/429 HTTP statuses so client and infrastructure tooling can rely on standard status-code semantics.',
     'Changes Applied': '',
   },
+  {
+    'Defect ID': 'BUG-004',
+    'Date': '22-Jul-2026',
+    'Instance': 'UAT',
+    'Module': 'Forgot User ID',
+    'Title': 'Correct, registered Full Name is rejected as "does not match with records" during Reference ID verification',
+    'Description': 'Live end-to-end happy-path verification for account nayan.aher@netwinindia.in: a valid Reference ID (SAHA072220267263, freshly issued and emailed to the registered address) was accepted by the API, but submitting the correct, user-confirmed registered Full Name "Nayan Aher" alongside it was rejected. POST http://14.142.238.29:8081/radheUserManagementAPI/common/otp/request returned {"resultVO":{"msgCode":"400","msgDescr":"Verification failed: Please check the field errors",...},"fieldErrors":[{"fieldCode":"name","fieldLabel":"Name of User","errorMessage":"Value does not match with records","errorType":"MISMATCH"}]}. The Reference ID, Date of Birth (02-05-2001), Employee ID (EMP-1514), and Mobile No. (9075063434) submitted alongside it were not flagged as mismatched. This blocks the true happy path of the Forgot User ID flow for a legitimate, correctly-identified user — likely a backend name-matching bug (e.g. exact-string comparison sensitive to stored formatting/whitespace/case) rather than a genuine data mismatch.',
+    'Test Data / Required Info': 'URL: http://14.142.238.28:8989/radheAgentWeb/forgetUser | Email/User: nayan.aher@netwinindia.in | Reference ID: SAHA072220267263 (single-use, since expired) | Name of User submitted: "Nayan Aher" (confirmed correct/registered by the account owner) | DOB: 02-05-2001 | Employee ID: EMP-1514 | Mobile: 9075063434 | Browser: Chromium (headed) | Env: UAT',
+    'Status': 'New',
+    'Screenshot / STR': 'screenshots/forgot-user-id/BUG-004_before-submit-all-fields-filled.png, screenshots/forgot-user-id/BUG-004_after-submit-name-mismatch-error.png, full API request/response in screenshots/forgot-user-id/network_requests.txt — STR: 1) Request a Reference ID for a registered email via Forgot User ID 2) On the step-2 identity form, enter the valid Reference ID plus the account\'s correct registered Name/DOB/Employee ID/Mobile 3) Submit 4) Observe "Name of User" is rejected with "Value does not match with records" despite being the correct registered name',
+    'Priority': 'Critical',
+    'Severity': 'Critical',
+    'Type': 'Functional',
+    'Retested Result': 'Not Retested',
+    'Developer Assigned': '',
+    'Resolved Date': '',
+    'Developer Comment': '',
+    'QA Comment': 'Found during a live, user-assisted happy-path run of FUI_TS001 (TC-FUI-020) — the account owner supplied the real Reference ID and identity data directly. This is the highest-priority defect in the module: it means a legitimate, correctly-identified user cannot currently complete User ID recovery at all. Recommend checking the backend name-comparison logic for hidden whitespace/case-sensitivity/diacritic handling against the stored registration record.',
+    'Changes Applied': '',
+  },
 ];
 
 async function main() {
