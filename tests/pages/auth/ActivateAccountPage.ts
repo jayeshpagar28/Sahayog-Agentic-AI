@@ -3,10 +3,7 @@ import { type Page, type Locator, expect } from '@playwright/test';
 export interface ActivationData {
   referenceId: string;
   userId: string;
-  nameOfUser: string;
   dateOfBirth: string;
-  employeeId: string;
-  mobileNo: string;
 }
 
 export class ActivateAccountPage {
@@ -16,10 +13,7 @@ export class ActivateAccountPage {
   readonly instructionText: Locator;
   readonly referenceIdInput: Locator;
   readonly userIdInput: Locator;
-  readonly nameOfUserInput: Locator;
   readonly dateOfBirthInput: Locator;
-  readonly employeeIdInput: Locator;
-  readonly mobileNoInput: Locator;
   readonly submitButton: Locator;
   readonly cancelButton: Locator;
   readonly toast: Locator;
@@ -32,10 +26,7 @@ export class ActivateAccountPage {
     this.instructionText = page.getByText('Please enter the below details.');
     this.referenceIdInput = page.getByPlaceholder('Reference ID');
     this.userIdInput = page.getByPlaceholder('User ID');
-    this.nameOfUserInput = page.getByPlaceholder('Name of User');
     this.dateOfBirthInput = page.locator('input[type="date"]');
-    this.employeeIdInput = page.getByPlaceholder('Employee ID');
-    this.mobileNoInput = page.getByPlaceholder('Mobile No.');
     this.submitButton = page.getByRole('button', { name: 'Submit' });
     this.cancelButton = page.getByRole('button', { name: 'Cancel' });
     this.toast = page.getByRole('alert');
@@ -45,21 +36,18 @@ export class ActivateAccountPage {
   }
 
   async goto(): Promise<void> {
-    await this.page.goto('/radheAgentWeb/activeteUser');
+    await this.page.goto('/activeteUser');
     await this.referenceIdInput.waitFor({ state: 'visible' });
   }
 
   async verifyPageLoaded(): Promise<void> {
-    await expect(this.page).toHaveURL(/\/radheAgentWeb\/activeteUser/);
+    await expect(this.page).toHaveURL(/\/activeteUser/);
     await expect(this.logo).toBeVisible();
     await expect(this.heading).toBeVisible();
     await expect(this.instructionText).toBeVisible();
     await expect(this.referenceIdInput).toBeVisible();
     await expect(this.userIdInput).toBeVisible();
-    await expect(this.nameOfUserInput).toBeVisible();
     await expect(this.dateOfBirthInput).toBeVisible();
-    await expect(this.employeeIdInput).toBeVisible();
-    await expect(this.mobileNoInput).toBeVisible();
     await expect(this.submitButton).toBeVisible();
     await expect(this.cancelButton).toBeVisible();
     await expect(this.footer).toBeVisible();
@@ -73,29 +61,14 @@ export class ActivateAccountPage {
     await this.userIdInput.fill(userId);
   }
 
-  async enterFullName(fullName: string): Promise<void> {
-    await this.nameOfUserInput.fill(fullName);
-  }
-
   async selectDateOfBirth(isoDate: string): Promise<void> {
     await this.dateOfBirthInput.fill(isoDate);
-  }
-
-  async enterEmployeeId(employeeId: string): Promise<void> {
-    await this.employeeIdInput.fill(employeeId);
-  }
-
-  async enterMobileNumber(mobileNumber: string): Promise<void> {
-    await this.mobileNoInput.fill(mobileNumber);
   }
 
   async fillActivationForm(data: ActivationData): Promise<void> {
     await this.enterReferenceId(data.referenceId);
     await this.enterUserId(data.userId);
-    await this.enterFullName(data.nameOfUser);
     await this.selectDateOfBirth(data.dateOfBirth);
-    await this.enterEmployeeId(data.employeeId);
-    await this.enterMobileNumber(data.mobileNo);
   }
 
   async clickActivateAccount(): Promise<void> {
@@ -109,10 +82,7 @@ export class ActivateAccountPage {
   async clearAllFields(): Promise<void> {
     await this.referenceIdInput.fill('');
     await this.userIdInput.fill('');
-    await this.nameOfUserInput.fill('');
     await this.dateOfBirthInput.fill('');
-    await this.employeeIdInput.fill('');
-    await this.mobileNoInput.fill('');
   }
 
   async isSubmitEnabled(): Promise<boolean> {
@@ -142,10 +112,7 @@ export class ActivateAccountPage {
   async verifyAllFieldsVisible(): Promise<void> {
     await expect(this.referenceIdInput).toBeVisible();
     await expect(this.userIdInput).toBeVisible();
-    await expect(this.nameOfUserInput).toBeVisible();
     await expect(this.dateOfBirthInput).toBeVisible();
-    await expect(this.employeeIdInput).toBeVisible();
-    await expect(this.mobileNoInput).toBeVisible();
   }
 
   async verifyButtons(): Promise<void> {
@@ -159,11 +126,7 @@ export class ActivateAccountPage {
 
   async navigateBackToLogin(): Promise<void> {
     await this.clickCancel();
-    await this.page.waitForURL(/\/radheAgentWeb\/login/);
-  }
-
-  async getMobileNumberValue(): Promise<string> {
-    return this.mobileNoInput.inputValue();
+    await this.page.waitForURL(/\/login/);
   }
 
   // Playwright's toBeVisible() only checks that an element itself renders

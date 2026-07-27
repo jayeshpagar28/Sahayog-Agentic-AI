@@ -30,7 +30,7 @@ export class LoginPage {
   }
 
   async goto(): Promise<void> {
-    await this.page.goto('/radheAgentWeb/login');
+    await this.page.goto('/login');
     await this.userIdInput.waitFor({ state: 'visible' });
   }
 
@@ -75,7 +75,7 @@ export class LoginPage {
   }
 
   async verifyLoginPageLoaded(): Promise<void> {
-    await expect(this.page).toHaveURL(/\/radheAgentWeb\/login/);
+    await expect(this.page).toHaveURL(/\/login/);
     await expect(this.logo).toBeVisible();
     await expect(this.userIdInput).toBeVisible();
     await expect(this.passwordInput).toBeVisible();

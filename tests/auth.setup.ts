@@ -10,6 +10,6 @@ setup('authenticate', async ({ page }) => {
     process.env.SAHAYOG_USER_ID ?? 'nayan.aher@netwinindia.in',
     process.env.SAHAYOG_PASSWORD ?? 'Sahayog@2025',
   );
-  await page.waitForURL(/\/radheAgentWeb\/HOME/);
+  await page.waitForURL(/\/HOME/);
   await page.context().storageState({ path: authFile });
 });

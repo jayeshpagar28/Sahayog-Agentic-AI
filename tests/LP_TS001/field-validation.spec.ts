@@ -21,7 +21,7 @@ test.describe('LP_TS001 - Field Validation', () => {
     await loginPage.clickLogin();
 
     await loginPage.verifyValidationMessage('Enter User Id');
-    await expect(page).toHaveURL(/\/radheAgentWeb\/login/);
+    await expect(page).toHaveURL(/\/login/);
     expect(tokenRequests).toHaveLength(0);
   });
 
@@ -52,7 +52,7 @@ test.describe('LP_TS001 - Field Validation', () => {
     // (defective) behavior so the suite fails loudly if the API stops being called
     // without a corresponding fix adding real client-side format validation.
     expect(tokenResponses.length).toBeGreaterThan(0);
-    await expect(page).toHaveURL(/\/radheAgentWeb\/login/);
+    await expect(page).toHaveURL(/\/login/);
   });
 
   test('TC-LOGIN-019: SQL Injection / XSS payloads are rejected safely', async ({ page }) => {
@@ -66,6 +66,6 @@ test.describe('LP_TS001 - Field Validation', () => {
     await page.waitForTimeout(1500);
 
     expect(dialogFired).toBe(false);
-    await expect(page).toHaveURL(/\/radheAgentWeb\/login/);
+    await expect(page).toHaveURL(/\/login/);
   });
 });

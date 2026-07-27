@@ -10,15 +10,15 @@ export class DashboardPage {
   }
 
   async goto(): Promise<void> {
-    await this.page.goto('/radheAgentWeb/HOME');
+    await this.page.goto('/HOME');
   }
 
   async verifyDashboardLoaded(): Promise<void> {
-    await expect(this.page).toHaveURL(/\/radheAgentWeb\/HOME/);
+    await expect(this.page).toHaveURL(/\/HOME/);
     await expect(this.body).toBeVisible();
   }
 
   async verifyRedirectedToLogin(): Promise<void> {
-    await expect(this.page).toHaveURL(/\/radheAgentWeb\/login/);
+    await expect(this.page).toHaveURL(/\/login/);
   }
 }

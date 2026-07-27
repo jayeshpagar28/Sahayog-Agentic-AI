@@ -18,7 +18,7 @@ test.describe('LP_TS001 - Login Functionality', () => {
 
   test('TC-LOGIN-010: Enter key on password field submits the form', async ({ page }) => {
     await loginPage.submitWithEnterKey(VALID_USER_ID, VALID_PASSWORD);
-    await page.waitForURL(/\/radheAgentWeb\/HOME/);
+    await page.waitForURL(/\/HOME/);
 
     const dashboardPage = new DashboardPage(page);
     await dashboardPage.verifyDashboardLoaded();
@@ -33,7 +33,7 @@ test.describe('LP_TS001 - Login Functionality', () => {
     });
 
     await loginPage.login(VALID_USER_ID, VALID_PASSWORD);
-    await page.waitForURL(/\/radheAgentWeb\/HOME/);
+    await page.waitForURL(/\/HOME/);
 
     const dashboardPage = new DashboardPage(page);
     await dashboardPage.verifyDashboardLoaded();
@@ -47,7 +47,7 @@ test.describe('LP_TS001 - Login Functionality', () => {
     await loginPage.login(VALID_USER_ID, 'WrongPass123!');
 
     await loginPage.verifyToastMessage('The password you entered is incorrect');
-    await expect(loginPage.page).toHaveURL(/\/radheAgentWeb\/login/);
+    await expect(loginPage.page).toHaveURL(/\/login/);
     expect(await loginPage.getPasswordFieldType()).toBe('password');
   });
 
@@ -70,7 +70,7 @@ test.describe('LP_TS001 - Login Functionality', () => {
 
   test('TC-LOGIN-016: Credentials never appear in the URL', async ({ page }) => {
     await loginPage.login(VALID_USER_ID, VALID_PASSWORD);
-    await page.waitForURL(/\/radheAgentWeb\/HOME/);
+    await page.waitForURL(/\/HOME/);
 
     expect(page.url()).not.toContain(VALID_USER_ID);
     expect(page.url()).not.toContain(VALID_PASSWORD);
@@ -88,7 +88,7 @@ test.describe('LP_TS001 - Login Functionality', () => {
     // Second click attempt while the loading overlay is up should be blocked
     // by the app itself (overlay intercepts pointer events) rather than fired.
     await loginPage.loginButton.click({ timeout: 1000 }).catch(() => undefined);
-    await page.waitForURL(/\/radheAgentWeb\/HOME/);
+    await page.waitForURL(/\/HOME/);
 
     expect(tokenRequests.length).toBeLessThanOrEqual(1);
   });
