@@ -2,10 +2,8 @@ import { type Page, type Locator, expect } from '@playwright/test';
 
 export interface Step2VerificationData {
   referenceId: string;
-  nameOfUser: string;
+  userId: string;
   dateOfBirth: string;
-  employeeId: string;
-  mobileNo: string;
 }
 
 export class ForgotUserIdPage {
@@ -13,15 +11,13 @@ export class ForgotUserIdPage {
   readonly logo: Locator;
   readonly heading: Locator;
   readonly instructionText: Locator;
-  readonly emailInput: Locator;
+  readonly mobileNumberInput: Locator;
   readonly sendReferenceIdButton: Locator;
   readonly cancelButton: Locator;
   readonly toast: Locator;
   readonly referenceIdInput: Locator;
-  readonly nameOfUserInput: Locator;
+  readonly userIdInput: Locator;
   readonly dateOfBirthInput: Locator;
-  readonly employeeIdInput: Locator;
-  readonly mobileNoInput: Locator;
   readonly submitButton: Locator;
   readonly footer: Locator;
 
@@ -29,16 +25,14 @@ export class ForgotUserIdPage {
     this.page = page;
     this.logo = page.locator('img.img-fluid').first();
     this.heading = page.getByRole('heading', { name: 'Recover Your User ID' });
-    this.instructionText = page.getByText('An Reference ID will be sent to your registered Email ID');
-    this.emailInput = page.getByPlaceholder('Email Id');
+    this.instructionText = page.getByText('An Reference ID will be sent to your registered Mobile Number');
+    this.mobileNumberInput = page.getByPlaceholder('Mobile Number');
     this.sendReferenceIdButton = page.getByRole('button', { name: 'Send Reference ID' });
     this.cancelButton = page.getByRole('button', { name: 'Cancel' });
     this.toast = page.getByRole('alert');
     this.referenceIdInput = page.getByPlaceholder('Reference ID');
-    this.nameOfUserInput = page.getByPlaceholder('Name of User');
+    this.userIdInput = page.getByPlaceholder('User ID');
     this.dateOfBirthInput = page.locator('input[type="date"]');
-    this.employeeIdInput = page.getByPlaceholder('Employee ID');
-    this.mobileNoInput = page.getByPlaceholder('Mobile No.');
     this.submitButton = page.getByRole('button', { name: 'Submit', exact: true });
     // "Powered By netwin" is baked into a single image asset, not real DOM text —
     // getByText never matches it. The image's accessible name is "Netwin Logo".
@@ -46,30 +40,30 @@ export class ForgotUserIdPage {
   }
 
   async goto(): Promise<void> {
-    await this.page.goto('/radheAgentWeb/forgetUser');
-    await this.emailInput.waitFor({ state: 'visible' });
+    await this.page.goto('/forgetUser');
+    await this.mobileNumberInput.waitFor({ state: 'visible' });
   }
 
   async verifyPageLoaded(): Promise<void> {
-    await expect(this.page).toHaveURL(/\/radheAgentWeb\/forgetUser/);
+    await expect(this.page).toHaveURL(/\/forgetUser/);
     await expect(this.logo).toBeVisible();
     await expect(this.heading).toBeVisible();
-    await expect(this.emailInput).toBeVisible();
+    await expect(this.mobileNumberInput).toBeVisible();
     await expect(this.sendReferenceIdButton).toBeVisible();
     await expect(this.cancelButton).toBeVisible();
     await expect(this.footer).toBeVisible();
   }
 
-  async enterEmail(email: string): Promise<void> {
-    await this.emailInput.fill(email);
+  async enterMobileNumber(mobileNumber: string): Promise<void> {
+    await this.mobileNumberInput.fill(mobileNumber);
   }
 
   async clickSendReferenceId(): Promise<void> {
     await this.sendReferenceIdButton.click();
   }
 
-  async sendReferenceId(email: string): Promise<void> {
-    await this.enterEmail(email);
+  async sendReferenceId(mobileNumber: string): Promise<void> {
+    await this.enterMobileNumber(mobileNumber);
     await this.clickSendReferenceId();
   }
 
@@ -91,23 +85,19 @@ export class ForgotUserIdPage {
 
   async verifyStep2Revealed(): Promise<void> {
     await expect(this.referenceIdInput).toBeVisible({ timeout: 15000 });
-    await expect(this.nameOfUserInput).toBeVisible();
+    await expect(this.userIdInput).toBeVisible();
     await expect(this.dateOfBirthInput).toBeVisible();
-    await expect(this.employeeIdInput).toBeVisible();
-    await expect(this.mobileNoInput).toBeVisible();
     await expect(this.submitButton).toBeVisible();
   }
 
-  async isEmailFieldLockedForEditing(): Promise<boolean> {
-    return this.emailInput.isDisabled();
+  async isMobileNumberFieldLockedForEditing(): Promise<boolean> {
+    return this.mobileNumberInput.isDisabled();
   }
 
   async fillStep2Verification(data: Step2VerificationData): Promise<void> {
     await this.referenceIdInput.fill(data.referenceId);
-    await this.nameOfUserInput.fill(data.nameOfUser);
+    await this.userIdInput.fill(data.userId);
     await this.dateOfBirthInput.fill(data.dateOfBirth);
-    await this.employeeIdInput.fill(data.employeeId);
-    await this.mobileNoInput.fill(data.mobileNo);
   }
 
   async clickSubmitStep2(): Promise<void> {

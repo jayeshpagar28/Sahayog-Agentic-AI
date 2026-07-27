@@ -20,7 +20,7 @@ test.describe('LP_TS001 - UI Validation', () => {
 
   test('TC-LOGIN-002: Page title and URL are correct', async ({ page }) => {
     await expect(page).toHaveTitle('Drutam Origination');
-    await expect(page).toHaveURL(/\/radheAgentWeb\/login/);
+    await expect(page).toHaveURL(/\/login/);
   });
 
   test('TC-LOGIN-003: Password field is masked by default', async () => {
