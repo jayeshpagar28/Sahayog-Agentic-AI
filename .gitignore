@@ -8,3 +8,6 @@ node_modules/
 /playwright/.auth/
 /tests/.auth/
 /screenshots/
+
+# Live-input signal files for manually-assisted tests (e.g. FUI_TS001 TC-FUI-020)
+.fui-*-input.txt
