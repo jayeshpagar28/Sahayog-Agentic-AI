@@ -16,7 +16,9 @@ jobs:
     - name: Install Playwright Browsers
       run: npx playwright install
     - name: Run Playwright tests
-      run: npx playwright test
+      # Firefox is excluded on this runner: it needs the VC++ Redistributable
+      # (msvcp140_1.dll) which isn't installed on the host machine yet.
+      run: npx playwright test --project=chromium --project=webkit
     - uses: actions/upload-artifact@v4
       if: ${{ !cancelled() }}
       with:
