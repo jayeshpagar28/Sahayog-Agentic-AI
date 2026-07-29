@@ -2,11 +2,12 @@ import { test, expect } from '@playwright/test';
 import { LoginPage } from '../pages/auth/LoginPage';
 import { ForgotUserIdPage } from '../pages/auth/ForgotUserIdPage';
 
-// No known registered mobile number is available in this environment (the
-// previously-known test mobile number from the old instance returns "User
-// not found" here) — tests that need a genuinely registered number are
-// scoped/skipped accordingly rather than assumed to work.
-const UNVERIFIED_MOBILE_NUMBER = '9511996248';
+// The account's registered mobile number was changed on 28-Jul-2026 from
+// 9075063434 to 9511996248 — this constant intentionally uses the number that
+// is NOT currently registered, so it now points at the old number instead.
+// Tests that need a genuinely registered number use 9511996248 directly (see
+// step2-identity-verification.spec.ts's "Full Recovery" describe block).
+const UNVERIFIED_MOBILE_NUMBER = '9075063434';
 
 test.describe('FUI_TS001 - Step 1: Mobile Number Recovery', () => {
   // Override project-level storageState so the browser starts unauthenticated

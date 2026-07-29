@@ -5,86 +5,84 @@ export interface Step2VerificationData {
   dateOfBirth: string;
 }
 
-export class ForgotUserIdPage {
+export class ForgotPasswordPage {
   readonly page: Page;
   readonly logo: Locator;
   readonly heading: Locator;
   readonly instructionText: Locator;
-  readonly mobileNumberInput: Locator;
+  readonly userIdInput: Locator;
   readonly sendReferenceIdButton: Locator;
   readonly cancelButton: Locator;
   readonly toast: Locator;
+  readonly errorTexts: Locator;
+  readonly footer: Locator;
+
+  // Step 2 — revealed after a valid Step 1 submission (same URL, no navigation)
+  readonly step2Heading: Locator;
+  readonly step2InstructionText: Locator;
   readonly referenceIdInput: Locator;
   readonly dateOfBirthInput: Locator;
   readonly submitButton: Locator;
-  readonly footer: Locator;
 
-  // Step 3 — OTP verification (revealed after Step 2's Submit succeeds)
-  readonly otpHeading: Locator;
+  // Step 3 — OTP verification (revealed after Step 2's Submit succeeds, navigates to /verifyOtp)
   readonly otpInstructionText: Locator;
   readonly otpInput: Locator;
   readonly resendCodeLink: Locator;
   readonly verifyButton: Locator;
 
-  // Final — User ID disclosure (revealed after OTP verification succeeds)
-  readonly disclosedUserIdText: Locator;
-
   constructor(page: Page) {
     this.page = page;
     this.logo = page.locator('img.img-fluid').first();
-    this.heading = page.getByRole('heading', { name: 'Recover Your User ID' });
+    this.heading = page.getByRole('heading', { name: 'Reset Your Password' });
     this.instructionText = page.getByText('An Reference ID will be sent to your registered Mobile Number');
-    this.mobileNumberInput = page.getByPlaceholder('Mobile Number');
+    this.userIdInput = page.locator('input[name="userId"]');
     this.sendReferenceIdButton = page.getByRole('button', { name: 'Send Reference ID' });
     this.cancelButton = page.getByRole('button', { name: 'Cancel' });
     this.toast = page.getByRole('alert');
-    this.referenceIdInput = page.getByPlaceholder('Reference ID');
-    this.dateOfBirthInput = page.locator('input[type="date"]');
-    this.submitButton = page.getByRole('button', { name: 'Submit', exact: true });
-    // "Powered By netwin" is baked into a single image asset, not real DOM text —
-    // getByText never matches it. The image's accessible name is "Netwin Logo".
+    this.errorTexts = page.locator('.error-text');
     this.footer = page.getByAltText('Netwin Logo');
 
-    // Step 2's Submit reveals this on the same URL (/forgetUser) — it is not a
-    // navigation, just a re-render, and reuses the page heading text "Recover User ID"
-    // (note: no "Your", unlike step 1's "Recover Your User ID").
-    this.otpHeading = page.getByRole('heading', { name: 'Recover User ID' });
-    this.otpInstructionText = page.getByText('An OTP has been sent to your registered Mobile Number');
+    this.step2Heading = page.getByRole('heading', { name: 'Reset Your Password' });
+    this.step2InstructionText = page.getByText('Please enter the Reference ID you received and verify your identity');
+    this.referenceIdInput = page.locator('input[name="referenceId"]');
+    this.dateOfBirthInput = page.locator('input[name="dob"]');
+    this.submitButton = page.getByRole('button', { name: 'Submit', exact: true });
+
+    this.otpInstructionText = page.getByText('Enter the 4-digit OTP sent to your Mobile Number');
     this.otpInput = page.getByPlaceholder('Verification Code');
     this.resendCodeLink = page.getByText(/Resend/);
     this.verifyButton = page.getByRole('button', { name: 'Verify' });
-
-    // The "User ID:" label is a <strong>, and the actual value is a sibling
-    // text node in the same parent (not inside the <strong>) — target the
-    // parent so innerText() captures both, not just the label.
-    this.disclosedUserIdText = page.locator('strong', { hasText: 'User ID:' }).locator('xpath=..');
   }
 
   async goto(): Promise<void> {
-    await this.page.goto('/forgetUser');
-    await this.mobileNumberInput.waitFor({ state: 'visible' });
+    await this.page.goto('/forgetPassword');
+    await this.userIdInput.waitFor({ state: 'visible' });
   }
 
   async verifyPageLoaded(): Promise<void> {
-    await expect(this.page).toHaveURL(/\/forgetUser/);
+    await expect(this.page).toHaveURL(/\/forgetPassword/);
     await expect(this.logo).toBeVisible();
     await expect(this.heading).toBeVisible();
-    await expect(this.mobileNumberInput).toBeVisible();
+    await expect(this.userIdInput).toBeVisible();
     await expect(this.sendReferenceIdButton).toBeVisible();
     await expect(this.cancelButton).toBeVisible();
     await expect(this.footer).toBeVisible();
   }
 
-  async enterMobileNumber(mobileNumber: string): Promise<void> {
-    await this.mobileNumberInput.fill(mobileNumber);
+  async enterUserId(userId: string): Promise<void> {
+    await this.userIdInput.fill(userId);
+  }
+
+  async clearUserId(): Promise<void> {
+    await this.userIdInput.fill('');
   }
 
   async clickSendReferenceId(): Promise<void> {
     await this.sendReferenceIdButton.click();
   }
 
-  async sendReferenceId(mobileNumber: string): Promise<void> {
-    await this.enterMobileNumber(mobileNumber);
+  async sendReferenceId(userId: string): Promise<void> {
+    await this.enterUserId(userId);
     await this.clickSendReferenceId();
   }
 
@@ -110,8 +108,8 @@ export class ForgotUserIdPage {
     await expect(this.submitButton).toBeVisible();
   }
 
-  async isMobileNumberFieldLockedForEditing(): Promise<boolean> {
-    return this.mobileNumberInput.isDisabled();
+  async isUserIdFieldLockedForEditing(): Promise<boolean> {
+    return this.userIdInput.isDisabled();
   }
 
   async fillStep2Verification(data: Step2VerificationData): Promise<void> {
@@ -119,15 +117,16 @@ export class ForgotUserIdPage {
     await this.dateOfBirthInput.fill(data.dateOfBirth);
   }
 
-  async clickSubmitStep2(): Promise<void> {
+  async clickSubmit(): Promise<void> {
     await this.submitButton.click();
   }
 
-  async isSubmitStep2Enabled(): Promise<boolean> {
+  async isSubmitEnabled(): Promise<boolean> {
     return !(await this.submitButton.isDisabled());
   }
 
   async verifyOtpStepRevealed(): Promise<void> {
+    await expect(this.page).toHaveURL(/\/verifyOtp/);
     await expect(this.otpInput).toBeVisible({ timeout: 15000 });
     await expect(this.verifyButton).toBeVisible();
   }
@@ -143,19 +142,5 @@ export class ForgotUserIdPage {
   async submitOtp(otp: string): Promise<void> {
     await this.enterOtp(otp);
     await this.clickVerify();
-  }
-
-  async isVerifyEnabled(): Promise<boolean> {
-    return !(await this.verifyButton.isDisabled());
-  }
-
-  async getDisclosedUserId(): Promise<string> {
-    const text = await this.disclosedUserIdText.innerText();
-    return text.replace(/^User ID:/, '').trim();
-  }
-
-  async verifyUserIdDisclosed(expectedUserId: string): Promise<void> {
-    await expect(this.disclosedUserIdText).toBeVisible({ timeout: 15000 });
-    expect(await this.getDisclosedUserId()).toBe(expectedUserId);
   }
 }
