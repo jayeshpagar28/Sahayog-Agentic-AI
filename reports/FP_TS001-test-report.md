@@ -7,37 +7,37 @@
 
 ## Executive Summary
 
-14 test cases were executed against the Forgot Password module: **13 deterministic tests, all passed**, plus **1 live-assisted end-to-end happy-path test, passed**. The full 4-step recovery flow — User ID → Reference ID + Date of Birth → OTP → password reset form — works correctly end-to-end when Reference ID delivery succeeds. One defect was found (`BUG-FP-001`), and one reliability concern was observed around Reference ID delivery timing (documented below, not a hard functional defect).
+13 test cases were executed against the Forgot Password module: **12 deterministic tests, all passed**, plus **1 live-assisted end-to-end happy-path test, passed**. The full 4-step recovery flow — User ID → Reference ID + Date of Birth → OTP → password reset form — works correctly end-to-end when Reference ID delivery succeeds. One defect was found (`BUG-FP-001`), and one reliability concern was observed around Reference ID delivery timing (`BUG-FP-002`, not a hard functional defect).
 
 ## Test Statistics
 
 | Test Type | Total | Passed | Failed |
 |---|---|---|---|
-| Happy Path / UI | 5 | 5 | 0 |
+| Happy Path / UI | 4 | 4 | 0 |
 | State-Aware UI | 2 | 2 | 0 |
-| Negative | 1 | 1 | 0 |
-| Security | 3 | 3 | 0 |
+| Negative | 3 | 3 | 0 |
+| Security | 2 | 2 | 0 |
 | Responsive | 1 | 1 | 0 |
 | Live Happy Path (Manually-Assisted) | 1 | 1 | 0 |
 | **Total** | **13** | **13** | **0** |
 
 ## Test Case Execution
 
-| Test Case ID | Title | Result |
-|---|---|---|
-| TC-FP-001 | Forgot Password page loads with all UI components | ✅ Pass |
-| TC-FP-002 | Page URL is correct after navigation | ✅ Pass |
-| TC-FP-003 | Send Reference ID button is disabled while User ID is blank | ✅ Pass |
-| TC-FP-004 | Send Reference ID button enables once User ID has a value | ✅ Pass |
-| TC-FP-005 | Whitespace-only User ID does not disable Send Reference ID | ✅ Pass (documents `BUG-FP-001`) |
-| TC-FP-006 | Unregistered User ID shows an error and stays on Step 1 | ✅ Pass |
-| TC-FP-007 | Cancel from Step 1 returns to the Login page | ✅ Pass |
-| TC-FP-008 | Credentials never appear in the URL | ✅ Pass |
-| TC-FP-009 | SQL Injection payload in User ID is handled safely | ✅ Pass |
-| TC-FP-010 | XSS payload in User ID is handled safely | ✅ Pass |
-| TC-FP-011 | Responsive layout on mobile viewport | ✅ Pass |
-| TC-FP-012 | Browser Back button after Cancel returns without errors | ✅ Pass |
-| TC-FP-020 | Full recovery with correct Reference ID, DOB, and OTP unlocks password reset (live) | ✅ Pass |
+| Test Case ID | Title | Test Type | Preconditions | Test Steps | Expected Result | Test Data | Priority | Actual Result |
+|---|---|---|---|---|---|---|---|---|
+| TC-FP-001 | Forgot Password page loads with all UI components | Happy Path | Unauthenticated | 1. Navigate via Login → "Forgot Password ?" | Logo, "Reset Your Password" heading, instruction text, User ID field, Send Reference ID button, Cancel button, footer all visible | N/A | Critical | ✅ Pass |
+| TC-FP-002 | Page URL is correct after navigation | Happy Path | On page | 1. Assert URL | URL contains `/forgetPassword` | N/A | High | ✅ Pass |
+| TC-FP-003 | Send Reference ID button is disabled while User ID is blank | State-Aware UI | On page | 1. Assert button state with User ID empty | Button disabled | N/A | High | ✅ Pass |
+| TC-FP-004 | Send Reference ID button enables once User ID has a value | State-Aware UI | On page | 1. Enter any character into User ID | Button becomes enabled | User ID: `a` | High | ✅ Pass |
+| TC-FP-005 | Whitespace-only User ID does not disable Send Reference ID | Negative | On page | 1. Enter `"   "` (whitespace) into User ID 2. Inspect button state | **Expected:** button stays disabled, matching blank-field behavior. **Actual (known defect BUG-FP-001):** button becomes enabled; server correctly rejects the resulting request ("User not found") but the client-side gate is missing | User ID: `"   "` | Medium | ✅ Pass (documents BUG-FP-001) |
+| TC-FP-006 | Unregistered User ID shows an error and stays on Step 1 | Negative | On page | 1. Submit a non-existent User ID | Error toast shown; Step 2 does not reveal; still on `/forgetPassword` | User ID: `no-such-user@netwinindia.in` | High | ✅ Pass |
+| TC-FP-007 | Cancel from Step 1 returns to the Login page | Happy Path | On page | 1. Click Cancel | Redirected to `/login` | N/A | Critical | ✅ Pass |
+| TC-FP-008 | Credentials never appear in the URL | Security | On page | 1. Submit a User ID 2. Inspect resulting URL | URL never contains the User ID string | User ID: `no-such-user@netwinindia.in` | High | ✅ Pass |
+| TC-FP-009 | SQL Injection payload in User ID is handled safely | Security | On page | 1. Submit `' OR '1'='1` | No error dialog; stays on `/forgetPassword`; Step 2 not revealed | User ID: `' OR '1'='1` | High | ✅ Pass |
+| TC-FP-010 | XSS payload in User ID is handled safely | Security | On page | 1. Submit `<script>alert(1)</script>` | No JS dialog fires; stays on `/forgetPassword` | User ID: `<script>alert(1)</script>` | High | ✅ Pass |
+| TC-FP-011 | Responsive layout on mobile viewport | Responsive | On page | 1. Resize to 375×667 | Page remains usable, all elements visible | 375×667 | Medium | ✅ Pass |
+| TC-FP-012 | Browser Back button after Cancel returns without errors | Negative | Cancel clicked | 1. Click Cancel 2. Press browser Back | No console errors after navigating back | N/A | Medium | ✅ Pass |
+| TC-FP-020 | Full recovery with correct Reference ID, DOB, and OTP unlocks password reset | Happy Path (Live, Manually-Assisted) | Registered User ID | 1. Send Reference ID (live) 2. Enter live Reference ID + DOB `02-05-2001` → Submit 3. Enter live OTP → Verify | Reference ID+DOB unlocks an OTP step; OTP verification unlocks the password reset form (New Password / Confirm Password / Save) | User ID `nayan.aher@netwinindia.in`, Reference ID `SMCC202607299385`, OTP `9375` | High | ✅ Pass (executed live with real, human-relayed data) |
 
 ## Live Happy-Path Confirmation (TC-FP-020)
 
@@ -62,7 +62,7 @@ This confirms the module's core purpose — unlocking the password reset step af
 ## Coverage Notes
 
 - Step 2's real field set (User ID, Reference ID, Date of Birth) is simpler than an older exploratory record on file, which showed 6 fields (adding First Name of User, Employee ID, Mobile No.) — the flow has evidently been simplified to the 3-field shape the story document itself describes. `ForgotPasswordPage.ts` reflects the current live structure.
-- `TC-FP-021`-equivalent (720-hour Reference ID expiry) was not automated — verifying a 30-day expiry window isn't practical in this environment, consistent with the same gap already accepted for Forgot User ID's `TC-FUI-021`.
+- A 720-hour Reference ID expiry test was not automated — verifying a 30-day expiry window isn't practical in this environment, consistent with the same gap already accepted for Forgot User ID's `TC-FUI-021`.
 
 ## Recommendations
 

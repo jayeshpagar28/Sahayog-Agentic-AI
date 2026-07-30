@@ -1,6 +1,34 @@
+import * as fs from 'fs';
+import * as path from 'path';
 import { test, expect } from '@playwright/test';
 import { LoginPage } from '../pages/auth/LoginPage';
 import { ActivateAccountPage, type ActivationData } from '../pages/auth/ActivateAccountPage';
+
+/**
+ * Waits for a file to appear at `filePath`, returns its trimmed contents, then deletes it.
+ * Used to hand a live human-supplied OTP into a running test — there is no way to read real
+ * SMS delivery programmatically here, and `page.pause()` does not hold for manual
+ * interaction in this environment either.
+ */
+function waitForSignalFile(filePath: string, timeoutMs: number): Promise<string> {
+  const start = Date.now();
+  return new Promise((resolve, reject) => {
+    const poll = () => {
+      if (fs.existsSync(filePath)) {
+        const value = fs.readFileSync(filePath, 'utf8').trim();
+        fs.unlinkSync(filePath);
+        resolve(value);
+        return;
+      }
+      if (Date.now() - start > timeoutMs) {
+        reject(new Error(`Timed out after ${timeoutMs}ms waiting for signal file: ${filePath}`));
+        return;
+      }
+      setTimeout(poll, 2000);
+    };
+    poll();
+  });
+}
 
 const TEST_DATA: ActivationData = {
   referenceId: 'TESTREF123',
@@ -185,10 +213,36 @@ test.describe('AA_TS001 - Activate Account', () => {
     expect(consoleErrors).toHaveLength(0);
   });
 
-  test('TC-AA-020: [Blocked] Full activation with a fully-matching identity activates the account', async () => {
-    test.skip(
-      true,
-      'Blocked: no Reference ID/User ID/DOB combination available in this environment that fully matches a server record on the new instance (sahyogagentweb.drutam.in:9634). Un-skip once a fully-matching data set is available.',
-    );
+  test('TC-AA-020: Full activation with a fully-matching identity activates the account', async ({ page }) => {
+    test.setTimeout(6 * 60 * 1000);
+    const OTP_SIGNAL_FILE = path.join(process.cwd(), '.aa-otp-input.txt');
+    if (fs.existsSync(OTP_SIGNAL_FILE)) fs.unlinkSync(OTP_SIGNAL_FILE);
+
+    // Real pending-activation account data supplied live by the user (not fabricated) —
+    // see project convention for verification-screen data.
+    const MATCHING_DATA: ActivationData = {
+      referenceId: 'SMCC202607306095',
+      userId: 'SMCCSW10132',
+      dateOfBirth: '1997-05-11', // DOB supplied as 11/05/1997 (DD/MM/YYYY)
+    };
+
+    await activateAccountPage.fillActivationForm(MATCHING_DATA);
+    await activateAccountPage.clickActivateAccount();
+    await activateAccountPage.verifyOtpStepRevealed();
+
+    console.log(`WAITING_FOR_OTP: write the code to ${OTP_SIGNAL_FILE} to continue.`);
+    const otp = await waitForSignalFile(OTP_SIGNAL_FILE, 5 * 60 * 1000);
+
+    await activateAccountPage.submitOtp(otp);
+    await activateAccountPage.verifyAccountSetupRevealed();
+
+    // Real password supplied live by the user to finalize this account's activation.
+    const NEW_PASSWORD = 'Sahayog@2026';
+    await activateAccountPage.setNewPassword(NEW_PASSWORD);
+    await page.waitForTimeout(2000);
+
+    console.log('URL after Save:', page.url());
+    console.log('Toast after Save:', await activateAccountPage.toast.innerText().catch(() => '(none)'));
+    console.log('Body text after Save:', (await page.locator('body').innerText().catch(() => '')).slice(0, 500));
   });
 });
