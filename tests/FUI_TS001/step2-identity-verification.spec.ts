@@ -122,6 +122,12 @@ function waitForSignalFile(filePath: string, timeoutMs: number): Promise<string>
 }
 
 test.describe('FUI_TS001 - Full Recovery (Live, Manually-Assisted)', () => {
+  // This suite waits on a human to relay a real, live-delivered SMS OTP/Reference ID via a
+  // signal file — nobody is present to do that in CI, so it would just burn up to ~11 minutes
+  // per browser project on a guaranteed timeout (and waste a real Reference ID request against
+  // the account's shared 24h quota on every retry). Skip entirely when unattended.
+  test.skip(!!process.env.CI, 'Manually-assisted OTP relay — not runnable unattended in CI');
+
   // Override project-level storageState so the browser starts unauthenticated
   test.use({ storageState: { cookies: [], origins: [] } });
 
