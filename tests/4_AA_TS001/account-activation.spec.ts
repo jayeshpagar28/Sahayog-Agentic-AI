@@ -214,6 +214,12 @@ test.describe('AA_TS001 - Activate Account', () => {
   });
 
   test('TC-AA-020: Full activation with a fully-matching identity activates the account', async ({ page }) => {
+    // This test waits on a human to relay a real, live-delivered SMS OTP via a signal file —
+    // nobody is present to do that in CI — and its Reference ID is a real, single-use value
+    // supplied live for one specific activation attempt, so it cannot be resubmitted
+    // successfully on any later run either. Skip entirely when unattended.
+    test.skip(!!process.env.CI, 'Manually-assisted OTP relay — not runnable unattended in CI');
+
     test.setTimeout(6 * 60 * 1000);
     const OTP_SIGNAL_FILE = path.join(process.cwd(), '.aa-otp-input.txt');
     if (fs.existsSync(OTP_SIGNAL_FILE)) fs.unlinkSync(OTP_SIGNAL_FILE);
