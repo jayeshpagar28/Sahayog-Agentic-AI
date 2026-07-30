@@ -19,6 +19,16 @@ export class ActivateAccountPage {
   readonly toast: Locator;
   readonly footer: Locator;
 
+  // OTP verification step — revealed after Submit succeeds, navigates to /verifyOtp
+  readonly otpInstructionText: Locator;
+  readonly otpInput: Locator;
+  readonly verifyButton: Locator;
+
+  // Account Setup — revealed after OTP verification succeeds, navigates to /resetPassword
+  readonly newPasswordInput: Locator;
+  readonly confirmPasswordInput: Locator;
+  readonly saveButton: Locator;
+
   constructor(page: Page) {
     this.page = page;
     this.logo = page.locator('img.img-fluid').first();
@@ -33,6 +43,14 @@ export class ActivateAccountPage {
     // "Powered By netwin" is baked into a single image asset, not real DOM text —
     // getByText never matches it. The image's accessible name is "Netwin Logo".
     this.footer = page.getByAltText('Netwin Logo');
+
+    this.otpInstructionText = page.getByText('Enter the 4-digit OTP sent to your Registered Mobile Number');
+    this.otpInput = page.getByPlaceholder('Verification Code');
+    this.verifyButton = page.getByRole('button', { name: 'Verify' });
+
+    this.newPasswordInput = page.locator('input[type="password"]').first();
+    this.confirmPasswordInput = page.locator('input[type="password"]').nth(1);
+    this.saveButton = page.getByRole('button', { name: 'Save' });
   }
 
   async goto(): Promise<void> {
@@ -147,5 +165,29 @@ export class ActivateAccountPage {
     return this.page.evaluate(
       () => document.documentElement.scrollHeight > document.documentElement.clientHeight,
     );
+  }
+
+  async verifyOtpStepRevealed(): Promise<void> {
+    await expect(this.page).toHaveURL(/\/verifyOtp/);
+    await expect(this.otpInput).toBeVisible({ timeout: 15000 });
+    await expect(this.verifyButton).toBeVisible();
+  }
+
+  async submitOtp(otp: string): Promise<void> {
+    await this.otpInput.fill(otp);
+    await this.verifyButton.click();
+  }
+
+  async verifyAccountSetupRevealed(): Promise<void> {
+    await expect(this.page).toHaveURL(/\/resetPassword/);
+    await expect(this.newPasswordInput).toBeVisible({ timeout: 15000 });
+    await expect(this.confirmPasswordInput).toBeVisible();
+    await expect(this.saveButton).toBeVisible();
+  }
+
+  async setNewPassword(password: string): Promise<void> {
+    await this.newPasswordInput.fill(password);
+    await this.confirmPasswordInput.fill(password);
+    await this.saveButton.click();
   }
 }
