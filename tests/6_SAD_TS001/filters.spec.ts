@@ -131,15 +131,17 @@ test.describe('SAD_TS001 - Filter Panel', () => {
   });
 
   test('TC-SAD-029: Combining a Scheme filter with a mobile-number search narrows to applications matching both', async () => {
-    const seedRow = savingsAppPage.tableBodyRows.first();
-    const seedId = (await seedRow.locator('td').first().textContent())?.trim() ?? '';
+    // Read both values from the same row in one call — see getRowCells() for why reading
+    // them separately is racy on this shared, actively-changing UAT data set.
+    const seedRowCells = await savingsAppPage.getRowCells(0);
+    const seedId = seedRowCells[0];
     const schemeCode = seedId.split('-')[1];
     const schemeNameByCode: Record<string, string> = {
       '1001': 'Normal Savings Account - 1001',
       '1002': 'Silver Savings Account - 1002',
       '1003': 'Staff Salary Account - 1003',
     };
-    const seedMobile = (await seedRow.locator('td').nth(4).textContent())?.trim() ?? '';
+    const seedMobile = seedRowCells[4];
 
     await savingsAppPage.openFilterPanel();
     await savingsAppPage.selectProduct('Savings Account');

@@ -21,14 +21,27 @@ test.describe('SAD_TS001 - Search', () => {
 
     // Seed real, currently-existing values from the live unfiltered list rather than
     // hardcoding a mobile number/application id that could stop existing on this shared UAT data.
-    seedApplicationId = (await savingsAppPage.getApplicationIds())[0];
-    seedMobileNo = (await savingsAppPage.tableBodyRows.first().locator('td').nth(4).textContent())?.trim() ?? '';
+    // Read both values from the same row in one call — reading them separately is racy on
+    // this shared, actively-changing data set (a new application landing between the two
+    // reads can pair one row's id with a different row's mobile number).
+    const seedRowCells = await savingsAppPage.getRowCells(0);
+    seedApplicationId = seedRowCells[0];
+    seedMobileNo = seedRowCells[4];
   });
 
-  test('TC-SAD-011: Searching by an exact registered mobile number returns exactly the matching application', async () => {
+  test('TC-SAD-011: Searching by an exact registered mobile number returns only applications with that number', async () => {
     await savingsAppPage.search(seedMobileNo);
     const ids = await savingsAppPage.getApplicationIds();
-    expect(ids).toEqual([seedApplicationId]);
+    expect(ids).toContain(seedApplicationId);
+
+    // The same mobile number can legitimately belong to more than one application on this
+    // shared UAT data (e.g. one person submitting multiple applications) — assert every
+    // returned row's own Mobile No matches, rather than assuming a single result.
+    const rows = savingsAppPage.tableBodyRows;
+    const count = await rows.count();
+    for (let i = 0; i < count; i++) {
+      await expect(rows.nth(i).locator('td').nth(4)).toHaveText(seedMobileNo);
+    }
   });
 
   test('TC-SAD-012: Searching by a valid Application Id returns the matching application', async () => {

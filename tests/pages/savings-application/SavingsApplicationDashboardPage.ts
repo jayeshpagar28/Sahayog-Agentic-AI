@@ -155,6 +155,16 @@ export class SavingsApplicationDashboardPage {
     return (await this.page.getByRole('button', { name: /clear filters/i }).count()) > 0;
   }
 
+  /** Reads every cell of one row in a single round-trip. On this shared, live UAT data set,
+   * reading a row's Application Id and Mobile No via two separate calls is racy — a new
+   * application can land (sorted newest-first) between the two reads, silently pairing one
+   * row's id with a different row's mobile number. Use this whenever a test needs more than
+   * one value from the same "seed" row. */
+  async getRowCells(rowIndex: number): Promise<string[]> {
+    const texts = await this.tableBodyRows.nth(rowIndex).locator('td').allTextContents();
+    return texts.map((t) => t.trim());
+  }
+
   async getApplicationIds(): Promise<string[]> {
     await this.waitForListSettled();
     if (await this.noRecordsRow.isVisible().catch(() => false)) return [];
