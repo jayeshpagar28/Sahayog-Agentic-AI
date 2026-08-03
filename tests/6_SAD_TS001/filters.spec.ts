@@ -69,10 +69,20 @@ test.describe('SAD_TS001 - Filter Panel', () => {
     await savingsAppPage.openFilterPanel();
     await savingsAppPage.selectDatePreset('Today');
 
+    // On this shared UAT data set, whether any application happens to be dated "today" varies
+    // day to day — a legitimate zero-result day must show "No Records Found" (AC13), not be
+    // treated as a broken table.
+    if (await savingsAppPage.noRecordsRow.isVisible().catch(() => false)) {
+      await savingsAppPage.verifyNoRecordsFound();
+      return;
+    }
+
     const rows = savingsAppPage.tableBodyRows;
     const count = await rows.count();
     expect(count).toBeGreaterThan(0);
 
+    // Derived from the test runner's own clock — if this ever flakes against a real dated
+    // application, suspect a timezone mismatch between the runner and the server first.
     const today = new Date();
     const dd = String(today.getDate()).padStart(2, '0');
     const mm = String(today.getMonth() + 1).padStart(2, '0');

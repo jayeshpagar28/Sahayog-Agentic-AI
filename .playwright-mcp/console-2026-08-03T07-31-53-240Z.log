@@ -1,0 +1,22 @@
+[     278ms] [LOG] called getTransactionMenuDtl @ https://sahyogagentweb.drutam.in:9634/static/js/main.ee8746f2.js:1
+[     278ms] [LOG] #REQ::  {portalId: FICAGN_WEB, roleLevel: 14, userId: nayan.aher@netwinindia.in, isImportant: 0, fromDate: null} @ https://sahyogagentweb.drutam.in:9634/static/js/main.ee8746f2.js:1
+[     303ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://sahyogagentweb.drutam.in:9634/sahyogUserManagementAPI/admin/sidemenu/list:0
+[     304ms] [LOG] #ERROR:  Gc @ https://sahyogagentweb.drutam.in:9634/static/js/main.ee8746f2.js:1
+[     306ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://sahyogagentweb.drutam.in:9634/sahyogAosAPI/aos/app/notification/list:0
+[     306ms] [LOG] #ERROR:  Gc @ https://sahyogagentweb.drutam.in:9634/static/js/main.ee8746f2.js:1
+[     326ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://sahyogagentweb.drutam.in:9634/sahyogAosAPI/aos/alert/get/list:0
+[     326ms] [LOG] #ERROR:  Gc @ https://sahyogagentweb.drutam.in:9634/static/js/main.ee8746f2.js:1
+[     342ms] [WARNING] Notifications permission has been blocked as the user has ignored the permission prompt several times. This can be reset in Page Info which can be accessed by clicking the tune icon next to the URL. See https://www.chromestatus.com/feature/6443143280984064 for more information. @ https://sahyogagentweb.drutam.in:9634/HOME:0
+[     342ms] [LOG] Token: undefined @ https://sahyogagentweb.drutam.in:9634/static/js/main.ee8746f2.js:1
+[     499ms] [WARNING] Notifications permission has been blocked as the user has ignored the permission prompt several times. This can be reset in Page Info which can be accessed by clicking the tune icon next to the URL. See https://www.chromestatus.com/feature/6443143280984064 for more information. @ https://sahyogagentweb.drutam.in:9634/login:0
+[     499ms] [LOG] Token: undefined @ https://sahyogagentweb.drutam.in:9634/static/js/main.ee8746f2.js:1
+[     499ms] [WARNING] Notifications permission has been blocked as the user has ignored the permission prompt several times. This can be reset in Page Info which can be accessed by clicking the tune icon next to the URL. See https://www.chromestatus.com/feature/6443143280984064 for more information. @ https://sahyogagentweb.drutam.in:9634/login:0
+[     499ms] [LOG] Token: undefined @ https://sahyogagentweb.drutam.in:9634/static/js/main.ee8746f2.js:1
+[   41164ms] [LOG] called getTransactionMenuDtl @ https://sahyogagentweb.drutam.in:9634/static/js/main.ee8746f2.js:1
+[   41164ms] [LOG] #REQ::  {portalId: FICAGN_WEB, roleLevel: 14, userId: nayan.aher@netwinindia.in, isImportant: 0, fromDate: null} @ https://sahyogagentweb.drutam.in:9634/static/js/main.ee8746f2.js:1
+[   41208ms] [WARNING] Notifications permission has been blocked as the user has ignored the permission prompt several times. This can be reset in Page Info which can be accessed by clicking the tune icon next to the URL. See https://www.chromestatus.com/feature/6443143280984064 for more information. @ https://sahyogagentweb.drutam.in:9634/HOME:0
+[   41208ms] [LOG] Token: undefined @ https://sahyogagentweb.drutam.in:9634/static/js/main.ee8746f2.js:1
+[   52042ms] [LOG] #REQ::  {agentId: nayan.aher@netwinindia.in, agnAppRefUuid: null, agnAppType: FICAGN_WEB, approvedReq: 0, asOnDate: null} @ https://sahyogagentweb.drutam.in:9634/static/js/main.ee8746f2.js:1
+[   52043ms] [LOG] #REQ::  {pageNo: 0, pageLimit: 1000, acType: 10, processId: SAV_APPL, searchValue: null} @ https://sahyogagentweb.drutam.in:9634/static/js/main.ee8746f2.js:1
+[   52044ms] [LOG] #REQ::  {aosProductUuid: undefined, productCode: undefined, acType: undefined, pageNo: 0, pageLimit: 1000} @ https://sahyogagentweb.drutam.in:9634/static/js/main.ee8746f2.js:1
+[   94440ms] [LOG] #REQ::  {agentId: nayan.aher@netwinindia.in, agnAppRefUuid: null, agnAppType: FICAGN_WEB, approvedReq: 0, asOnDate: null} @ https://sahyogagentweb.drutam.in:9634/static/js/main.ee8746f2.js:1
