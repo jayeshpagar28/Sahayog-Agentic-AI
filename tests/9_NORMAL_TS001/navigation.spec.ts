@@ -1,35 +1,32 @@
 import { test, expect } from '@playwright/test';
-import { SilverApplicationPage } from '../pages/savings-application/SilverApplicationPage';
+import { NormalApplicationPage } from '../pages/savings-application/NormalApplicationPage';
 
-/** Resumes a real, already-in-progress live application — read-only navigation
- * between its unlocked tabs is safe and does not modify any of its saved data.
- * SAH-1002-798 (original fixture) and SAH-1002-775 (its 2026-08-10 replacement) have
- * both since been driven to real final submission and are now locked/read-only in the
- * Submitted tab, so this points at SAH-1002-771 (Individual, SHRUTI TUSHAR SONAWANE,
- * sitting at eKYC Verification, untouched by any of this project's live exploration)
- * instead. If this application is ever submitted/locked too, repoint to another
- * currently-Pending application past Mobile Number Verification. */
+/** Resumes a real, already-in-progress application untouched by this project's live
+ * exploration (SAH-1001-796/-805/-806 were all deliberately driven to real final
+ * submission and are now locked/read-only in the Submitted tab). SAH-1001-795 sits at
+ * eKYC Verification and was intentionally left alone in favor of starting fresh — read-only
+ * navigation between its unlocked tabs is safe and does not modify any of its saved data. */
 async function gotoCompletedApplication(page: import('@playwright/test').Page): Promise<void> {
   await page.goto('/HOME');
   await page.waitForLoadState('networkidle').catch(() => undefined);
   await page.getByRole('button', { name: 'Savings Application' }).click();
   await page.waitForURL(/\/UNPOSTED/);
   await page.locator('.p-datatable-tbody tr').first().waitFor({ state: 'visible', timeout: 15000 });
-  const row = page.locator('.p-datatable-tbody tr', { hasText: 'SAH-1002-771' });
+  const row = page.locator('.p-datatable-tbody tr', { hasText: 'SAH-1001-795' });
   await row.locator('svg.fa-eye').click();
   await page.waitForURL(/\/applndetails/);
   await page.waitForTimeout(2000);
 }
 
-test.describe('SILVER_TS001 - AC17 Previous/Next Navigation', () => {
-  test('TC-SIL-140: Clicking a previously-completed stage tab navigates back and shows retained data', async ({ page }) => {
+test.describe('NORMAL_TS001 - AC17 Previous/Next Navigation', () => {
+  test('TC-NOR-140: Clicking a previously-completed stage tab navigates back and shows retained data', async ({ page }) => {
     await gotoCompletedApplication(page);
     await page.locator('#categorytab li a', { hasText: 'Mobile Number Verification' }).click();
     await page.waitForTimeout(1000);
     await expect(page.getByText('Mobile Number Verification submitted successfully.')).toBeVisible();
   });
 
-  test('TC-SIL-141: The stepper scroll chevrons do not change the active step', async ({ page }) => {
+  test('TC-NOR-141: The stepper scroll chevrons do not change the active step', async ({ page }) => {
     await gotoCompletedApplication(page);
     const activeTabBefore = await page.locator('#categorytab li.tab_selected a').textContent();
     const scrollRight = page.locator('.scroll_tab_right_button').first();
@@ -41,10 +38,10 @@ test.describe('SILVER_TS001 - AC17 Previous/Next Navigation', () => {
     expect(activeTabAfter).toBe(activeTabBefore);
   });
 
-  test('TC-SIL-142: A freshly-started draft only exposes the current stage tab — later stages cannot be skipped to', async ({ page }) => {
-    const silverPage = new SilverApplicationPage(page);
-    await silverPage.startNewApplication();
-    const tabLabels = await silverPage.getStepperTabLabels();
+  test('TC-NOR-142: A freshly-started draft only exposes the current stage tab — later stages cannot be skipped to', async ({ page }) => {
+    const normalPage = new NormalApplicationPage(page);
+    await normalPage.startNewApplication();
+    const tabLabels = await normalPage.getStepperTabLabels();
     expect(tabLabels).toEqual(['Mobile Number Verification']);
   });
 });

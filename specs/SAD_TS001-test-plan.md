@@ -17,7 +17,7 @@
 
 | Entity | Create | Read | Update | Delete |
 |---|---|---|---|---|
-| Savings Application | Out of scope (New Application button exists but its flow is covered by a future story) | ✅ List (table, search, filter, pagination) + ✅ Detail (View → `/applndetails`, out of scope for deep coverage) | Out of scope (application editing happens inside the out-of-scope wizard) | N/A — "Cancel" action exists (see Business Rules) but is destructive against shared UAT data; not exercised by automation |
+| Savings Application | Out of scope (New Application button exists but its flow is covered by a future story) | ✅ List (table, search, filter, pagination) + ✅ Detail (View → `/applndetails`, out of scope for deep coverage) | Out of scope (application editing happens inside the out-of-scope wizard) | ✅ "Cancel" action — confirmed live 2026-08-14 against a disposable stale draft (`SAH-1001-591`), not a real in-progress application (see Business Rules) |
 
 **State transitions (application status lifecycle, as observed):**
 `Pending` (`Sourcer Pending`, `Detail Data Entry Pending`) → `Submitted` (`Sourcer Submit`, `Branch Submit`, `*Query Resolved`, `RO_FWD Submit`, `CPC Review Query Raised`) → `Re-Assigned` (`CPC Query Raised`) → `Decisioned` (`CPC Approve`, `CPC Review Approve`, `Sourcer Cancel`, `Sourcer System Terminate`)
@@ -26,8 +26,8 @@
 - BR1: The 4 status tabs are mutually exclusive views — selecting a tab scopes the table + count to that status only.
 - BR2: Search (mobile no. / application id) is a prefix/substring match, is scoped by whatever tab is currently active, and updates all 4 tab counts to reflect the search, not just the active tab's count.
 - BR3: Filters (Product, Scheme, Date) are additive/AND-combined with each other, with search, and with the active status tab.
-- BR4: The Scheme dropdown's options are independent of the Product dropdown value on this data set (only one Product exists), but a fresh `getUserwiseAllscheme` API call is fired whenever Product changes, confirming a designed dependency even though it isn't observable with only one Product.
-- BR5: Applications in `Pending`/`Re-Assigned` status expose an Action menu with **Track Application** (read-only, opens a stage-progress modal) and **Cancel** (destructive — terminates the application). Cancel is never exercised by automation against shared UAT data.
+- BR4: The Scheme dropdown is confirmed cascading on Product — empty until a Product is selected, then populates (confirmed: "Silver Savings Account - 1002", "Normal Savings Account - 1001", "Staff Salary Account - 1003" after Product = "Savings Account"). A fresh `getUserwiseAllscheme` API call fires whenever Product changes.
+- BR5: Applications in `Pending`/`Re-Assigned` status expose an Action menu with **Track Application** (read-only, opens a stage-progress modal) and **Cancel** (destructive — terminates the application). Confirmed live 2026-08-14: Cancel's Reason dropdown has 9 options (Applicant Request, Incomplete Documentation, Eligibility Not Met, Discrepancy In Information, Change in Applicant's Financial Situation, Approval Delay, Unable to Meet Collateral Requirements, Fraud Suspected, Other); Submit fires `POST /endModule/app/cancel/submit` returning `msgCode:"APPL_REJECT"`, and the application moves to Decisioned status with no undo path. Executed against a disposable stale draft (`SAH-1001-591`), never against a real in-progress application.
 - BR6: The `Decisioned` tab's table includes an additional `Account No` column not present on the other 3 tabs (an account only exists once decisioned).
 - BR7 (recommendation only, not implemented): AC9 requests a "Clear Filters" button; confirmed absent from the UI — this is a UX recommendation per the story, not a defect.
 
@@ -87,7 +87,7 @@
 | TC-SAD-014 | Searching with a value that matches nothing shows "No Records Found" without a page error | Negative | AC4, AC13 | High |
 | TC-SAD-015 | Leading/trailing whitespace in the search box is ignored (trimmed) before matching | Negative/Validation | AC4 | Medium |
 | TC-SAD-016 | Clearing the search box restores the full unfiltered list for the active tab | Happy Path | AC4 | Medium |
-| TC-SAD-017 | Search results update all 4 tab counts to reflect the search scope | Business Rule | AC4, BR2 | Medium |
+| TC-SAD-017 | Search results update all 4 tab counts to reflect the search scope — **confirmed live 2026-08-14**: searching a single Application Id showed Pending:1/Submitted:0/etc. for just that result, not account-wide totals (matches BR2 as designed; flagged only as a UX consideration since a user could misread it as the total) | Business Rule | AC4, BR2 | Medium |
 | TC-SAD-018 | SQL Injection payload in the search box is handled safely (no error, no data leak) | Negative/Security | AC4 | High |
 | TC-SAD-019 | XSS payload in the search box does not execute and is handled safely | Negative/Security | AC4 | High |
 
@@ -96,11 +96,11 @@
 | ID | Title | Type | AC | Priority |
 |---|---|---|---|---|
 | TC-SAD-020 | Clicking the filter icon opens the filter panel showing Product, Scheme, and Date dropdowns | Happy Path | AC5 | Critical |
-| TC-SAD-021 | Product dropdown is populated from the API (`products/getUserwiseAllproducts`), not hardcoded/empty | Form Field Deep Validation | AC5, AC6 | High |
-| TC-SAD-022 | Scheme dropdown is populated from the API (`scheme/getUserwiseAllscheme`), not hardcoded/empty | Form Field Deep Validation | AC5, AC6 | High |
-| TC-SAD-023 | Selecting a Product re-fetches the Scheme list (field interdependency), confirmed via network request | Form Field Deep Validation | AC6, BR4 | Medium |
-| TC-SAD-024 | Selecting a Scheme filters the table to only applications on that scheme and updates tab counts accordingly | Happy Path | AC6 | Critical |
-| TC-SAD-025 | Selecting a Date preset ("Today") filters the table to only applications dated today | Happy Path | AC6 | High |
+| TC-SAD-021 | Product dropdown is populated from the API (`products/getUserwiseAllproducts`), not hardcoded/empty — **confirmed live 2026-08-14**: one option, "Savings Account" | Form Field Deep Validation | AC5, AC6 | High |
+| TC-SAD-022 | Scheme dropdown is populated from the API (`scheme/getUserwiseAllscheme`), not hardcoded/empty — **confirmed live 2026-08-14**: empty until Product chosen, then "Silver Savings Account - 1002" / "Normal Savings Account - 1001" / "Staff Salary Account - 1003" | Form Field Deep Validation | AC5, AC6 | High |
+| TC-SAD-023 | Selecting a Product re-fetches the Scheme list (field interdependency), confirmed via network request — **confirmed live 2026-08-14** | Form Field Deep Validation | AC6, BR4 | Medium |
+| TC-SAD-024 | Selecting a Scheme filters the table to only applications on that scheme and updates tab counts accordingly — **confirmed live 2026-08-14**: Scheme="Normal Savings Account - 1001" narrowed all rows to 1001-prefixed ids | Happy Path | AC6 | Critical |
+| TC-SAD-025 | Selecting a Date preset filters the table to matching applications — **confirmed live 2026-08-14**: 5 presets exist (As On Date, Today, Last 7 Days, Last 15 Days, Custom Date); "Last 7 Days" correctly computed `fromDate:"2026-08-07", toDate:"2026-08-14"` and narrowed results. Custom Date's date-picker pair not yet exercised. | Happy Path | AC6 | High |
 | TC-SAD-026 | An empty-result filter selection shows "No Records Found" | Negative/Empty State | AC6, AC13 | Medium |
 | TC-SAD-027 | Combining Product + Scheme filters narrows results to the intersection with no conflicts | CRUD/Combination | AC7 | High |
 | TC-SAD-028 | Combining Scheme + Date filters narrows results to the intersection | Combination | AC7 | Medium |
@@ -117,6 +117,8 @@
 | TC-SAD-034 | Table is horizontally scrollable so the View/Action columns remain reachable when extra columns (e.g. Account No, active filter chips) widen the table beyond the viewport | UI/Responsive | AC10, AC14 | Medium |
 | TC-SAD-035 | Opening the Action menu on a Pending-status row shows "Track Application" and "Cancel" options | Happy Path | AC11 | Critical |
 | TC-SAD-036 | "Track Application" opens a modal showing the current stage, actor name/role, and timestamp, and can be closed | Happy Path | AC11 | High |
+| TC-SAD-047 | Cancel dialog shows a Reason dropdown with the full configured reason list — **confirmed live 2026-08-14**: 9 options (Applicant Request, Incomplete Documentation, Eligibility Not Met, Discrepancy In Information, Change in Applicant's Financial Situation, Approval Delay, Unable to Meet Collateral Requirements, Fraud Suspected, Other) | Happy Path | AC11, BR5 | High |
+| TC-SAD-048 | Submitting Cancel with a selected reason performs a real, irreversible cancellation — **confirmed live 2026-08-14** against disposable stale draft `SAH-1001-591`: `POST /endModule/app/cancel/submit` returns `msgCode:"APPL_REJECT"`; application moves to Decisioned status and drops out of default/active list search; no undo path observed | Happy Path / Destructive | AC11, BR5 | Critical |
 
 ### Pagination (Test Type 4)
 
@@ -150,5 +152,5 @@
 - Create New Savings Application (the "New Application" button's flow)
 - Applicant Details / the multi-step wizard reached via "View" (`/applndetails`) — only entry/navigation is verified
 - KYC Verification, Product & Scheme Selection Workflow, Document Upload, Review & Submission, Approval Workflow, Decision Process, Post-Submission Actions
-- The destructive "Cancel" action inside the Action menu (would cancel a real shared-UAT application)
 - AC9's "Clear Filters" button — not implemented; only its absence is confirmed (TC-SAD-031)
+- Custom Date filter preset's from/to date-picker pair — not yet exercised (TC-SAD-025)

@@ -49,6 +49,8 @@ A fresh authenticated session was used to actually click every interactive contr
 | TC-HOME-023 | Session persists after refresh on Homepage | Happy Path | AC15 | Authenticated, on Homepage | Load Homepage; refresh | Homepage reloads without redirect to login | — | High *(already covered by `TC-LOGIN-012` — not duplicated)* |
 | TC-HOME-024 | Unauthenticated direct navigation to Homepage is blocked | Negative / Security | AC15 | No session | Clear storage state; navigate to `/HOME` | Redirected to `/login` | — | Critical *(already covered by `TC-LOGIN-017` — not duplicated)* |
 
+*(The Application List Dashboard reached via the Savings Application card — status tabs, search, filter panel, and row Action menu — belongs to `US_006_Savings_Application_Dashboard.md` / `SAD_TS001-test-plan.md`, not this Homepage story. Findings confirmed 2026-08-14 were moved there.)*
+
 ## Save Location
 This document: `specs/HP_TS001-test-plan.md`
 Automation: `tests/HP_TS001/homepage.spec.ts`

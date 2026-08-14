@@ -1,0 +1,75 @@
+{
+  "scheme": "normal",
+  "accountType": "individual",
+
+  "applicationMobile": "9511996248",
+
+  "branch": {
+    "change": true,
+    "branchName": "GOREGAON BRANCH"
+  },
+
+  "applicant": {
+    "prefix": "Mr",
+    "gender": "Male",
+    "email": "shubhamnetwin@gmail.com",
+    "maritalStatus": "Married",
+    "spouseOrFatherName": "Aishwarya",
+    "fatherFirstName": "Madhukar",
+    "fatherLastName": "Borse",
+    "motherName": "Meena",
+    "religion": "Hindu",
+    "casteCategory": "General",
+    "education": "Graduate",
+    "region": "Urban Area",
+    "employmentType": "Salaried",
+    "designation": "Private Company Employee",
+    "fundingMode": "Cash",
+    "initialFundingAmount": "5000",
+    "expectedValue": "100000",
+    "expectedNumber": "12",
+    "agricultureIncome": "0",
+    "otherIncome": "0",
+    "chequeDetails": {
+      "chequeNumber": "",
+      "chequeDate": "",
+      "draweeBankName": "",
+      "ifscCode": ""
+    },
+    "employmentInfo": {
+      "category": "Private Sector Employee – Corporate / MNC",
+      "organizationName": "Softtech Solutions",
+      "annualIncome": "1200000",
+      "annualTurnover": "1200000",
+      "sourceOfIncome": "Salary"
+    },
+    "communicationAddress": {
+      "line1": "Nashik55",
+      "line2": "Nashik55",
+      "state": "Maharashtra",
+      "city": "Nashik",
+      "pin": "413055"
+    }
+  },
+
+  "nominee": {
+    "fullName": "Mangesh Deshmukh",
+    "relation": "Business Associate",
+    "dob": "1997-07-25"
+  },
+
+  "documents": [
+    { "type": "Ration Card" }
+  ],
+
+  "introducer": {
+    "name": "Bhuwan Dnyaneshwar Patle",
+    "accountNumber": "100144590015067",
+    "periodOfAcquaintance": "5 Years"
+  },
+
+  "leadDetails": {
+    "leadConverterCode": "SAH09078",
+    "sourcerCode": "SAH09078"
+  }
+}

@@ -1,0 +1,126 @@
+{
+  "_instructions": "Copy this file to config.json and fill in real data. Omit blocks that don't apply to your accountType (see comments below). Every value is a string unless noted. Dropdown values must match the exact option label shown in the UI (see specs/SILVER_TS001-test-plan.md / NORMAL_TS001-test-plan.md for confirmed option lists).",
+
+  "scheme": "normal, comment: 'silver' or 'normal'",
+  "accountType": "individual, comment: 'individual' | 'joint' | 'minor'",
+
+  "applicationMobile": "<real 10-digit mobile number for the very first Mobile Number Verification step - the account holder's own number for individual/joint, or just the initiating number for minor>",
+
+  "branch": {
+    "change": false,
+    "branchName": "<only used if change=true, e.g. 'GOREGAON BRANCH' - must exactly match a card in the Change Branch list>"
+  },
+
+  "applicant": {
+    "_comment": "Present for accountType=individual|joint. Omit entirely for accountType=minor.",
+    "prefix": "Mr",
+    "gender": "Male",
+    "email": "<real email, avoid a dot in the local part before @ - BUG-NORMAL-004 rejects e.g. first.last@x.com>",
+    "maritalStatus": "Married",
+    "spouseOrFatherName": "<only if Married, else leave empty string>",
+    "fatherFirstName": "",
+    "fatherLastName": "",
+    "motherName": "",
+    "religion": "Hindu",
+    "casteCategory": "General",
+    "education": "Graduate",
+    "region": "Urban Area",
+    "employmentType": "Salaried, comment: e.g. Salaried | Self employed | Unemployed | Professional | Agriculture/Farmer | Retired | Housewife | Other | Business",
+    "designation": "Private Company Employee",
+    "fundingMode": "Cash, comment: 'Cash' or 'Cheque' - application-level, only set on applicant (or minor block for minor accounts), never on jointApplicant/guardian",
+    "initialFundingAmount": "5000",
+    "expectedValue": "100000",
+    "expectedNumber": "12",
+    "agricultureIncome": "0",
+    "otherIncome": "300000",
+    "chequeDetails": {
+      "_comment": "Only used if fundingMode=Cheque",
+      "chequeNumber": "",
+      "chequeDate": "YYYY-MM-DD",
+      "draweeBankName": "",
+      "ifscCode": ""
+    },
+    "employmentInfo": {
+      "_comment": "Fields used depend on employmentType: Salaried -> Salaried Information (category/organizationName/annualIncome/sourceOfIncome); Self employed -> Self Employed Information (category/organizationName/annualTurnover/sourceOfIncome); other types may skip this step entirely.",
+      "category": "Private Sector Employee – Corporate / MNC",
+      "organizationName": "",
+      "annualIncome": "600000",
+      "annualTurnover": "600000",
+      "sourceOfIncome": "Salary"
+    },
+    "communicationAddress": {
+      "line1": "",
+      "line2": "",
+      "state": "Maharashtra",
+      "city": "",
+      "pin": ""
+    }
+  },
+
+  "jointApplicant": {
+    "_comment": "Present only when accountType=joint. Same shape as 'applicant' minus fundingMode/chequeDetails (those are application-level, set on 'applicant' only), plus relationshipWithMain and their own real mobile.",
+    "mobile": "<real 10-digit mobile number, different from applicationMobile>",
+    "relationshipWithMain": "Others, comment: exact dropdown option - Friend is NOT available, use Others/Business Associate/etc.",
+    "prefix": "Mr", "gender": "Male", "email": "",
+    "maritalStatus": "Unmarried", "spouseOrFatherName": "",
+    "fatherFirstName": "", "fatherLastName": "", "motherName": "",
+    "religion": "Hindu", "casteCategory": "General", "education": "Graduate", "region": "Urban Area",
+    "employmentType": "Salaried", "designation": "Private Company Employee",
+    "employmentInfo": { "category": "Private Sector Employee – Corporate / MNC", "organizationName": "", "annualIncome": "600000", "annualTurnover": "", "sourceOfIncome": "Salary" },
+    "communicationAddress": { "line1": "", "line2": "", "state": "Maharashtra", "city": "", "pin": "" }
+  },
+
+  "minor": {
+    "_comment": "Present only when accountType=minor. Describes the child themselves (Minor KYC Details + their own Address/Basic Details). Mode of Operation is always 'Guardian' - handled automatically.",
+    "firstName": "", "middleName": "", "lastName": "",
+    "dob": "YYYY-MM-DD",
+    "aadhaarNumber": "<12-digit real Aadhaar number>",
+    "address": { "line1": "", "line2": "", "state": "Maharashtra", "city": "", "pin": "" },
+    "prefix": "Master, comment: Master for male minor, Baby/Kumari for female",
+    "gender": "Male",
+    "email": "",
+    "maritalStatus": "Unmarried",
+    "fatherFirstName": "", "fatherLastName": "", "motherName": "",
+    "religion": "Hindu", "casteCategory": "General", "education": "Uneducated", "region": "Urban Area",
+    "employmentType": "Unemployed, comment: Unemployed routes straight to Guardian Details with no employment-info step",
+    "designation": "School Student",
+    "fundingMode": "Cash",
+    "initialFundingAmount": "1000", "expectedValue": "10000", "expectedNumber": "5",
+    "agricultureIncome": "0", "otherIncome": "0"
+  },
+
+  "guardian": {
+    "_comment": "Present only when accountType=minor. The guardian's OWN full sub-journey - their own real mobile, eKYC, liveliness, address, basic details, employment, photo.",
+    "mobile": "<real 10-digit mobile number>",
+    "relationshipWithMain": "Father, comment: exact dropdown option - e.g. Father/Mother/Natural Guardian (Natural Guardian has intermittently failed to resolve as selectable - Father/Mother are more reliable)",
+    "prefix": "Mr", "gender": "Male", "email": "",
+    "maritalStatus": "Married", "spouseOrFatherName": "",
+    "fatherFirstName": "", "fatherLastName": "", "motherName": "",
+    "religion": "Hindu", "casteCategory": "General", "education": "Graduate", "region": "Urban Area",
+    "employmentType": "Salaried", "designation": "Private Company Employee",
+    "employmentInfo": { "category": "Private Sector Employee – Corporate / MNC", "organizationName": "", "annualIncome": "600000", "annualTurnover": "", "sourceOfIncome": "Salary" },
+    "communicationAddress": { "line1": "", "line2": "", "state": "Maharashtra", "city": "", "pin": "" }
+  },
+
+  "nominee": {
+    "fullName": "",
+    "relation": "Wife, comment: exact dropdown option - Wife/Husband/Father/Mother/Son/Daughter/etc.",
+    "dob": "YYYY-MM-DD"
+  },
+
+  "documents": [
+    { "type": "Ration Card", "_comment": "List the mandatory-marked document type FIRST (currently 'Ration Card *' on both schemes) to avoid the confirmed silent document-loss defect. Additional optional types can follow." }
+  ],
+
+  "introducer": {
+    "_comment": "Skipped automatically if the Introducer Details tab never appears for this scheme/accountType combination (e.g. Silver Individual/Minor skip it).",
+    "name": "Bhuwan Dnyaneshwar Patle",
+    "accountNumber": "100144590015067",
+    "periodOfAcquaintance": "5 Years"
+  },
+
+  "leadDetails": {
+    "leadConverterCode": "SAH09078",
+    "sourcerCode": "SAH09078"
+  }
+}

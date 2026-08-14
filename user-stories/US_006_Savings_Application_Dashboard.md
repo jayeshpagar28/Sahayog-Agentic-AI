@@ -134,18 +134,23 @@ The filter panel shall:
 
 Verify each filter independently.
 
+**Confirmed live, 2026-08-14:** all three filters apply immediately on selection — own `POST /app/activity/list` call fires per change, no separate Apply/Search button exists.
+
 ### Product Filter
 
 * Selecting a Product shall return only applications for that Product.
+* Confirmed: only one option currently exists ("Savings Account").
 
 ### Scheme Filter
 
 * Selecting a Scheme shall return only matching applications.
+* Confirmed: cascading on Product — empty/unpopulated until a Product is selected. After Product = "Savings Account", shows "Silver Savings Account - 1002", "Normal Savings Account - 1001", "Staff Salary Account - 1003". Selecting Scheme = "Normal Savings Account - 1001" correctly narrowed the list to only 1001-prefixed applications.
 
 ### Date Filter
 
 * Selected date/date range shall return matching applications.
 * Invalid or empty results shall display "No Records Found."
+* Confirmed: this is a preset dropdown (not a free calendar picker) with 5 options — As On Date, Today, Last 7 Days, Last 15 Days, Custom Date. "Last 7 Days" confirmed to compute `fromDate`/`toDate` correctly (e.g. `fromDate:"2026-08-07", toDate:"2026-08-14"` on 2026-08-14) and narrow results accordingly. "Custom Date" (presumably reveals a from/to date-picker pair) was not exercised.
 
 ### Status Filter
 
@@ -239,6 +244,13 @@ Verify:
 * Available actions are displayed based on application status and user permissions.
 * Clicking an action performs the intended functionality.
 * Appropriate success or validation messages are displayed.
+
+**Confirmed live, 2026-08-14:** the Action menu (⋮ icon) exposes exactly two options: Track Application and Cancel.
+* **Track Application** — read-only. Opens an "Application Tracking" dialog showing stage name (e.g. "Sourcer"), stage status (e.g. "Initiated"), the assigned officer's name and role (e.g. "Nayan Aher, Branch Origination Officer"), and a timestamp.
+* **Cancel** — destructive. Opens an "Application Cancellation" dialog with a "Reason" dropdown and Submit button. Full flow executed end-to-end against a genuinely stale/abandoned draft (`SAH-1001-591` — never progressed past Mobile Number Verification, no applicant name ever attached), chosen deliberately over a real in-progress application:
+  * Reason options: Applicant Request, Incomplete Documentation, Eligibility Not Met, Discrepancy In Information, Change in Applicant's Financial Situation, Approval Delay, Unable to Meet Collateral Requirements, Fraud Suspected, Other.
+  * Submit fires `POST /endModule/app/cancel/submit`; confirmed response `{"msgCode":"APPL_REJECT","msgDescr":"Your application is rejected !","success":"TRUE"}`.
+  * Post-cancel: the application immediately drops out of the default/active Application List search results and its status becomes "Decisioned". No undo/reactivate path was observed.
 
 ---
 
