@@ -3,6 +3,7 @@ import * as path from 'path';
 import { test, expect } from '@playwright/test';
 import { LoginPage } from '../pages/auth/LoginPage';
 import { ForgotUserIdPage } from '../pages/auth/ForgotUserIdPage';
+import { waitForSignalFile } from '../support/signalFile';
 
 // The account's registered mobile number was changed on 28-Jul-2026 from
 // 9075063434 to 9511996248 (see the "Full Recovery" describe block below,
@@ -94,32 +95,6 @@ test.describe('FUI_TS001 - Step 2: Identity Verification', () => {
     );
   });
 });
-
-/**
- * Waits for a file to appear at `filePath`, returns its trimmed contents, then deletes it.
- * Used to hand a live human-supplied value (Reference ID, OTP) into a running test — there is
- * no way to read real SMS/email delivery programmatically in this environment, and
- * `page.pause()` does not actually hold for manual interaction here either.
- */
-function waitForSignalFile(filePath: string, timeoutMs: number): Promise<string> {
-  const start = Date.now();
-  return new Promise((resolve, reject) => {
-    const poll = () => {
-      if (fs.existsSync(filePath)) {
-        const value = fs.readFileSync(filePath, 'utf8').trim();
-        fs.unlinkSync(filePath);
-        resolve(value);
-        return;
-      }
-      if (Date.now() - start > timeoutMs) {
-        reject(new Error(`Timed out after ${timeoutMs}ms waiting for signal file: ${filePath}`));
-        return;
-      }
-      setTimeout(poll, 2000);
-    };
-    poll();
-  });
-}
 
 test.describe('FUI_TS001 - Full Recovery (Live, Manually-Assisted)', () => {
   // This suite waits on a human to relay a real, live-delivered SMS OTP/Reference ID via a

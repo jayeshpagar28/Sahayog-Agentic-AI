@@ -291,11 +291,10 @@ Reconciled against the authoritative rule engine (`aoscust_module_rules_setting.
 
 ## 3. Out of Scope
 
-- Actually clicking the final Submit on the Summary page (TC-SIL-132) — deliberately left pending real user confirmation given it is the single most consequential, hardest-to-reverse action in the entire journey (submits a real application for further bank processing).
 - Deleting a Joint Applicant or Nominee via the table's Delete icon — destructive against a real, fully-completed live application.
-- Full automated re-execution of any stage requiring real OTP, DigiLocker authentication, or Liveliness camera capture — these were executed live once with real human involvement (per project convention established across all modules with OTP/verification steps) and are not suitable for unattended CI-style reruns, since each run would consume a real person's phone/SMS/DigiLocker session.
-- Minor account type ("Minor") full journey — only Individual and Joint were exercised live; Minor's guardian-specific fields were not explored.
-- Individual (non-Joint) full journey beyond Account Type selection — the live-executed happy path used Joint throughout to also exercise the Joint Applicant Details mirror-journey (the richer, higher-risk path).
+- Two-way cross-browser/device automation of the DigiLocker/Liveliness phone-side steps themselves — these genuinely happen on the applicant's own phone, outside this browser session.
+
+**No longer out of scope (2026-08-14):** dedicated, independently-runnable, manually-assisted Playwright specs now exist for the complete live journey — including real final Submit — for all 3 Account Types. See section 5 below.
 
 ---
 
@@ -317,3 +316,17 @@ Reconciled against the authoritative rule engine (`aoscust_module_rules_setting.
 | Minor (unnumbered) | Low | Two dropdown option label typos: Region's "Metropolitian City", Mode of Operation's "Any Two Jointhly". |
 | Minor (unnumbered) | Low | Applicant Photo's document-upload area shows "Capture Using Camera" twice instead of "Browse Computer... OR Capture Using Camera" once camera permission is granted. |
 | Reliability note (not a hard defect) | Low | Security Code Liveliness link delivery was unreliable across multiple real attempts (expired without arriving), on both applications tested. |
+
+---
+
+## 5. Automation — Dedicated Per-Flow Scripts
+
+Each Account Type has its own complete, independently-executable spec covering Mobile Verification through real final Submit:
+
+| Account Type | Spec file |
+|---|---|
+| Individual | `tests/8_SILVER_TS001/silver-savings-individual.spec.ts` (live-verified end-to-end 2026-08-14, application SAH-1002-810) |
+| Joint | `tests/8_SILVER_TS001/silver-savings-joint.spec.ts` |
+| Minor | `tests/8_SILVER_TS001/silver-savings-minor.spec.ts` |
+
+Shared step library: `tests/support/savingsApplicationFlow.ts`. Mobile OTP is relayed via a signal file (see `tests/support/signalFile.ts`); DigiLocker/Liveliness are handled by polling the live status (no typed input needed — the applicant acts on their own phone). All three are tagged `test.skip(!!process.env.CI, ...)` — manually-assisted, not silently omitted from the suite, just skipped-with-reason when no human is available to relay input. Each requires real, not-recently-used mobile numbers supplied via env vars (`SAHAYOG_SIL_IND_MOBILE`, `SAHAYOG_SIL_JNT_MOBILE`/`SAHAYOG_SIL_JNT_CO_MOBILE`, `SAHAYOG_SIL_MIN_MOBILE`/`SAHAYOG_SIL_MIN_GUARDIAN_MOBILE`).

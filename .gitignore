@@ -9,5 +9,10 @@ node_modules/
 /tests/.auth/
 /screenshots/
 
-# Live-input signal files for manually-assisted tests (e.g. FUI_TS001 TC-FUI-020)
+# Live-input signal files for manually-assisted tests (e.g. FUI_TS001 TC-FUI-020,
+# FP_TS001 TC-FP-020, AA_TS001 TC-AA-020, Savings Account flow specs)
 .fui-*-input.txt
+.fp-*-input.txt
+.aa-otp-input.txt
+.sil-*-input.txt
+.nor-*-input.txt

@@ -3,6 +3,7 @@ import * as path from 'path';
 import { test, expect } from '@playwright/test';
 import { LoginPage } from '../pages/auth/LoginPage';
 import { ForgotPasswordPage } from '../pages/auth/ForgotPasswordPage';
+import { waitForSignalFile } from '../support/signalFile';
 
 // The account's Reference ID quota is shared across Forgot Password and Forgot
 // User ID and is rate-limited to 24h — this constant deliberately uses a User ID
@@ -118,32 +119,6 @@ test.describe('FP_TS001 - Forgot Password', () => {
     expect(consoleErrors).toHaveLength(0);
   });
 });
-
-/**
- * Waits for a file to appear at `filePath`, returns its trimmed contents, then deletes it.
- * Used to hand a live human-supplied value (Reference ID) into a running test — there is no
- * way to read real SMS delivery programmatically here, and `page.pause()` does not actually
- * hold for manual interaction in this environment either.
- */
-function waitForSignalFile(filePath: string, timeoutMs: number): Promise<string> {
-  const start = Date.now();
-  return new Promise((resolve, reject) => {
-    const poll = () => {
-      if (fs.existsSync(filePath)) {
-        const value = fs.readFileSync(filePath, 'utf8').trim();
-        fs.unlinkSync(filePath);
-        resolve(value);
-        return;
-      }
-      if (Date.now() - start > timeoutMs) {
-        reject(new Error(`Timed out after ${timeoutMs}ms waiting for signal file: ${filePath}`));
-        return;
-      }
-      setTimeout(poll, 2000);
-    };
-    poll();
-  });
-}
 
 test.describe('FP_TS001 - Full Recovery (Live, Manually-Assisted)', () => {
   // This suite waits on a human to relay a real, live-delivered SMS OTP/Reference ID via a

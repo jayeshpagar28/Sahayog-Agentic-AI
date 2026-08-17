@@ -274,4 +274,18 @@
 - **Cross-project finding:** the Joint-Account-Type pass's Branch Selection investigation (TC-NOR-062) retracted a false defect claim made earlier in that session and cast doubt on the Silver Savings Account's previously-reported BUG-SILVER-009 — recommend re-verifying that defect before it is relied upon in the Silver report.
 - **Cross-scheme finding:** both the Individual-Account-Type pass (TC-NOR-143) and the Minor-Account-Type pass (TC-NOR-144) found that Normal Savings Account's routing differs from Silver's — Introducer Details is mandatory for Individual AND Minor here, but skipped entirely for both on Silver (only Joint requires it there). All three Account Types require Introducer Details on the Normal Savings Account. Confirms the user story's original caution not to assume the two schemes share routing rules.
 - **All three Account Types now fully traced end to end** for the Normal Savings Account (Joint, Individual, Minor), matching the depth of coverage already achieved for the Silver Savings Account.
-- **Applications submitted for real this project:** `SAH-1001-796` (Joint, Shubham Madhukar Borse), `SAH-1001-805` (Individual, Yash Pravin Sonawane), and `SAH-1001-806` (Minor, Bhushan Vishnu Joshi, guardian Shubham Madhukar Borse) — all three confirmed moved from Pending to Submitted ("Sourcer Submit").
+- **Applications submitted for real this project:** `SAH-1001-796` (Joint, Shubham Madhukar Borse), `SAH-1001-805` (Individual, Yash Pravin Sonawane), `SAH-1001-806` (Minor, Bhushan Vishnu Joshi, guardian Shubham Madhukar Borse), and `SAH-1001-808` (Individual, Yash Pravin Sonawane — the first fully-scripted end-to-end run, `msgCode:"ENDMOD_200"`) — all confirmed moved from Pending to Submitted ("Sourcer Submit").
+
+---
+
+## 4. Automation — Dedicated Per-Flow Scripts
+
+Each Account Type has its own complete, independently-executable spec covering Mobile Verification through real final Submit:
+
+| Account Type | Spec file |
+|---|---|
+| Individual | `tests/9_NORMAL_TS001/normal-savings-individual.spec.ts` (live-verified end-to-end 2026-08-14, application SAH-1001-808) |
+| Joint | `tests/9_NORMAL_TS001/normal-savings-joint.spec.ts` |
+| Minor | `tests/9_NORMAL_TS001/normal-savings-minor.spec.ts` |
+
+Shared step library: `tests/support/savingsApplicationFlow.ts` (also used by the Silver scheme's dedicated scripts). Mobile OTP is relayed via a signal file (see `tests/support/signalFile.ts`); DigiLocker/Liveliness are handled by polling the live status (no typed input needed — the applicant acts on their own phone). All three are tagged `test.skip(!!process.env.CI, ...)` — manually-assisted, not silently omitted from the suite, just skipped-with-reason when no human is available to relay input. Each requires real, not-recently-used mobile numbers supplied via env vars (`SAHAYOG_NOR_IND_MOBILE`, `SAHAYOG_NOR_JNT_MOBILE`/`SAHAYOG_NOR_JNT_CO_MOBILE`, `SAHAYOG_NOR_MIN_MOBILE`/`SAHAYOG_NOR_MIN_GUARDIAN_MOBILE`). Unlike Silver, all 3 Account Types on Normal require Introducer Details.
