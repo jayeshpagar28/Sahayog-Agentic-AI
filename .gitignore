@@ -16,3 +16,12 @@ node_modules/
 .aa-otp-input.txt
 .sil-*-input.txt
 .nor-*-input.txt
+
+# Claude Code runtime state (agent definitions under .claude/agents/ ARE tracked)
+.claude/scheduled_tasks.lock
+
+# Playwright MCP session snapshots/console logs (scratch, regenerated every run)
+.playwright-mcp/
+
+# Microsoft Office lock files
+~$*.xlsx
