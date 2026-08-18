@@ -1,8 +1,23 @@
+> **This file covers Steps 1–7 of the pipeline.** Task classification and agent routing live
+> in [`orchestrator.md`](./orchestrator.md).
+>
+> **Step 0 — Explore the existing system and generate the user story — is owned by the BA
+> Agent** ([`ba_agent_prompt.md`](./ba_agent_prompt.md)). Steps 1–7 *consume* a user story;
+> they do not produce one. If no current, evidence-backed story exists for the module, run
+> Step 0 first rather than writing requirements from the task description.
+
+---
+
 # Step 1: Read and Analyze the User Story
 
 ## Objective
 
 Read the provided user story and fully derive all testing requirements from it. Do not assume a fixed module scope — let the story content define what must be tested.
+
+> **Input:** `user-stories/US_0NN_{Module}.md` — produced by the BA Agent in Step 0, with
+> every behavioural claim evidence-tagged. Carry the story's `[NOT VERIFIED]` items forward
+> as explicitly-blocked coverage, and keep its `[GAP]` items out of the AC set until a
+> stakeholder has signed them off.
 
 ---
 
