@@ -6,6 +6,15 @@
         "-y",
         "@playwright/mcp@latest"
       ]
+    },
+    "playwright-camera": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@latest",
+        "--config",
+        "playwright-mcp-camera.config.json"
+      ]
     }
   }
 }

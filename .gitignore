@@ -11,3 +11,12 @@ node_modules/
 
 # Live-input signal files for manually-assisted tests (e.g. FUI_TS001 TC-FUI-020)
 .fui-*-input.txt
+
+# Claude Code runtime state (agent definitions under .claude/agents/ ARE tracked)
+.claude/scheduled_tasks.lock
+
+# Playwright MCP session snapshots/console logs (scratch, regenerated every run)
+.playwright-mcp/
+
+# Microsoft Office lock files
+~$*.xlsx

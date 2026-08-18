@@ -1,0 +1,19 @@
+{
+  "_comment": "Playwright MCP config for exploring steps that require camera/geolocation — e.g. Savings Application → Applicant Photo (photo + signature capture), which has NO file-upload fallback (see specs/STAFF_TS001-exploration-log.md, D-29). Use with: npx @playwright/mcp@latest --config playwright-mcp-camera.config.json",
+  "browser": {
+    "browserName": "chromium",
+    "launchOptions": {
+      "headless": false,
+      "args": [
+        "--use-fake-device-for-media-stream",
+        "--use-fake-ui-for-media-stream",
+        "--allow-file-access-from-files"
+      ]
+    },
+    "contextOptions": {
+      "permissions": ["camera", "geolocation"],
+      "geolocation": { "latitude": 19.076, "longitude": 72.8777 },
+      "ignoreHTTPSErrors": true
+    }
+  }
+}
