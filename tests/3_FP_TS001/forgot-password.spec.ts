@@ -135,7 +135,7 @@ test.describe('FP_TS001 - Full Recovery (Live, Manually-Assisted)', () => {
   // fabricated value, per project convention for verification-screen data.
   test.setTimeout(6 * 60 * 1000);
 
-  const REGISTERED_USER_ID = process.env.SAHAYOG_USER_ID ?? 'nayan.aher@netwinindia.in';
+  const REGISTERED_USER_ID = process.env.SAHAYOG_USER_ID || 'nayan.aher@netwinindia.in';
   // Confirmed field value for this account — see memory sahayog_fp_step2_test_data.
   const DATE_OF_BIRTH = '2001-05-02';
 
