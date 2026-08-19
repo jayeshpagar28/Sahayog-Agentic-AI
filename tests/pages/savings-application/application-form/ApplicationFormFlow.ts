@@ -18,7 +18,18 @@ export class ApplicationFormFlow {
     this.ekyc = new EkycVerificationStep(page);
   }
 
-  /** Home -> Savings Application -> New Application -> Scheme Selection -> /applndetails. */
+  /**
+   * Home -> Savings Application -> New Application -> Scheme Selection -> /applndetails.
+   *
+   * Always walks the UI. `/schemelist` must never be reached by direct navigation or reload:
+   * doing so renders a permanently blank page and throws
+   * "Cannot read properties of null (reading 'acType')" (BUG-STAFF-002's sibling,
+   * BUG-STAFF-001).
+   *
+   * Note for scheme 1003 (Staff Salary Account): the 1003 workflow has **no Account Type
+   * step** — a verified OTP advances straight to eKYC Verification — so `this.accountType`
+   * must not be driven for that scheme.
+   */
   async startNewApplication(schemeName = 'Normal Savings Account - 1001'): Promise<void> {
     const dashboardPage = new DashboardPage(this.page);
     await dashboardPage.goto();

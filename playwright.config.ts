@@ -30,7 +30,60 @@ export default defineConfig({
 
     {
       name: 'chromium',
+      // Excluded from routine runs:
+      //  - applicant-photo: needs the fake video device supplied by chromium-camera below.
+      //  - seed-application-builder: NOT a regression test. It creates a real application and
+      //    sends real SMS to a real handset, consuming attempt budgets capped at 3. Run it
+      //    deliberately by path, never as part of a suite sweep.
+      testIgnore: /(applicant-photo|staff-salary-journey|seed-application-builder)\.spec\.ts/,
       use: { ...devices['Desktop Chrome'], storageState: 'tests/.auth/user.json' },
+      dependencies: ['setup'],
+    },
+
+    /**
+     * Camera-dependent specs (STAFF_TS001's Applicant Photo step).
+     *
+     * The Applicant Photo step offers no <input type="file"> at all — capture is the only
+     * path for both the photo and the signature — so a fake video device is mandatory.
+     * Two prerequisites, both learned the hard way during exploration: the device AND the
+     * permissions are required (permissions alone are not enough), and the matching browser
+     * build must be installed.
+     */
+    {
+      name: 'chromium-camera',
+      testMatch: /(applicant-photo|staff-salary-journey)\.spec\.ts/,
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: 'tests/.auth/user.json',
+        permissions: ['camera', 'geolocation'],
+        geolocation: { latitude: 19.076, longitude: 72.8777 },
+        launchOptions: {
+          args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'],
+        },
+      },
+      dependencies: ['setup'],
+    },
+
+    /**
+     * Seed builder — deliberately its own project.
+     *
+     * It is excluded from `chromium` via testIgnore so a suite sweep can never create a real
+     * application or send real SMS. But testIgnore applies even when the file is named
+     * explicitly, so without a project of its own the builder becomes unrunnable ("No tests
+     * found"). This project is the single, explicit way to invoke it.
+     */
+    {
+      name: 'seed-builder',
+      testMatch: /seed-application-builder\.spec\.ts/,
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: 'tests/.auth/user.json',
+        permissions: ['camera', 'geolocation'],
+        geolocation: { latitude: 19.076, longitude: 72.8777 },
+        launchOptions: {
+          args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'],
+        },
+      },
       dependencies: ['setup'],
     },
 
