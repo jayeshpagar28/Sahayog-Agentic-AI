@@ -16,6 +16,10 @@ node_modules/
 .aa-otp-input.txt
 .sil-*-input.txt
 .nor-*-input.txt
+.staff-otp-input.txt
+.staff-digilocker-done.txt
+.staff-liveliness-done.txt
+.staff-applicant-id.txt
 
 # Claude Code runtime state (agent definitions under .claude/agents/ ARE tracked)
 .claude/scheduled_tasks.lock
@@ -25,3 +29,7 @@ node_modules/
 
 # Microsoft Office lock files
 ~$*.xlsx
+
+# Live-application artefacts containing real applicant PII - never commit
+STAFF_TS001-summary-screen.png
+summary-response.json
