@@ -160,6 +160,11 @@ test.describe('STAFF_TS001 - Staff Salary Account creation (cold, every step)', 
   });
 
   test.beforeEach(async ({ page }) => {
+    // Every step needs more than Playwright's 30s default: the form-heavy steps (Basic Details
+    // fills 21 fields) run close to 30s, and the three gate steps wait on a human. Raise the
+    // floor here; the gate steps raise it further at their own start.
+    test.setTimeout(4 * 60 * 1000);
+
     staffPage = new StaffSalaryApplicationPage(page);
     journey = new StaffJourneySteps(page);
     if (applicantId) await staffPage.resumeApplication(applicantId);
@@ -175,31 +180,49 @@ test.describe('STAFF_TS001 - Staff Salary Account creation (cold, every step)', 
   });
 
   test('CREATE-02: Mobile verification creates the application and advances to eKYC', async ({ page }) => {
-    const mobileStep = new MobileVerificationStep(page);
-    await staffPage.startNewApplication();
-    await mobileStep.enterMobileNumber(MOBILE);
-    await mobileStep.clickSendVerificationCode();
+    test.setTimeout(16 * 60 * 1000); // OTP is a human gate — allow the wait plus margin.
 
-    // Surface the real cause rather than failing later on an unrelated locator.
-    const blocked = await page
-      .getByText(/already in process/i)
-      .first()
-      .isVisible({ timeout: 8000 })
-      .catch(() => false);
-    if (blocked) {
-      throw new Error(
-        `Mobile ${MOBILE} already has an application in process — the server refuses a second ` +
-          'one. Finish or cancel the existing application, or use another handset.',
-      );
+    const mobileStep = new MobileVerificationStep(page);
+    const resumeId = process.env.STAFF_RESUME_ID;
+
+    if (resumeId) {
+      // Continue an application already created and OTP-sent — used to reuse a run that was
+      // interrupted after the SMS went out, so the code is not wasted.
+      await staffPage.resumeApplication(resumeId);
+      applicantId = resumeId;
+
+      // If it already passed mobile verification, there is nothing to do here.
+      if (await staffPage.hasStep('eKYC Verification')) {
+        console.log(`Resumed ${resumeId} — already past Mobile Verification.`);
+        return;
+      }
+    } else {
+      await staffPage.startNewApplication();
+      await mobileStep.enterMobileNumber(MOBILE);
+      await mobileStep.clickSendVerificationCode();
+
+      // Surface the real cause rather than failing later on an unrelated locator.
+      const blocked = await page
+        .getByText(/already in process/i)
+        .first()
+        .isVisible({ timeout: 8000 })
+        .catch(() => false);
+      if (blocked) {
+        throw new Error(
+          `Mobile ${MOBILE} already has an application in process — the server refuses a second ` +
+            'one. Finish or cancel the existing application, resume it with STAFF_RESUME_ID, or ' +
+            'use another handset.',
+        );
+      }
+
+      applicantId = await mobileStep.getApplicantId();
+      // BR-02 — the Applicant Id embeds the scheme code.
+      expect(applicantId).toMatch(/^SAH-1003-\d+$/);
     }
 
     await expect(mobileStep.otpInput, 'the OTP field appears after a successful send').toBeVisible({
       timeout: 30000,
     });
-
-    applicantId = await mobileStep.getApplicantId();
-    // BR-02 — the Applicant Id embeds the scheme code.
-    expect(applicantId).toMatch(/^SAH-1003-\d+$/);
 
     if (fs.existsSync(OTP_SIGNAL_FILE)) fs.unlinkSync(OTP_SIGNAL_FILE);
     banner(`GATE 1 of 3 — SMS OTP  (application ${applicantId})`, [
@@ -225,6 +248,7 @@ test.describe('STAFF_TS001 - Staff Salary Account creation (cold, every step)', 
   });
 
   test('CREATE-04: eKYC — Aadhaar via DigiLocker, then submit', async ({ page }) => {
+    test.setTimeout(28 * 60 * 1000); // DigiLocker consent is a human gate; the script polls status.
     const ekyc = new EkycVerificationStep(page);
     await staffPage.openStep('eKYC Verification');
 
@@ -250,6 +274,7 @@ test.describe('STAFF_TS001 - Staff Salary Account creation (cold, every step)', 
   });
 
   test('CREATE-05: Liveliness — one method suffices, then submit', async ({ page }) => {
+    test.setTimeout(28 * 60 * 1000); // Liveliness is a human gate; the script polls status.
     const liveliness = new LivelinessVerificationStep(page);
     await staffPage.openStep(LivelinessVerificationStep.STEP_LABEL);
 
