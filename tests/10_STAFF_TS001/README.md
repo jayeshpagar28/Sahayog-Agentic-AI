@@ -19,11 +19,11 @@ can never be re-opened).
 | `scheme-selection` | ✅ always | Scheme list, server-side search — creates no record |
 | `mobile-verification` | ✅ always | Mobile-number validation up to (not including) Send — creates no record |
 | `console-network-hygiene` | ✅ always | No console errors / no 4xx-5xx on the reachable journey |
-| `staff-account-creation` | ⚠️ on demand | The full journey — creates a REAL application, every step |
+| `staff-account-creation` | ⚠️ on demand | The full journey — creates a REAL application, every step, and **submits** it |
 
 `staff-account-creation.spec.ts` is the heart of the suite: 15 ordered steps that create an
-application and drive it from Mobile Verification through to the Summary, asserting each form as
-it is filled.
+application and drive it from Mobile Verification through the Summary and its final
+submission, asserting each form as it is filled.
 
 ---
 
@@ -82,11 +82,13 @@ real application and sends real SMS on every run), with the OTP supplied through
 
 ---
 
-## Two safety rules that must not be relaxed
+## Safety
 
-1. **The Summary's Submit is never clicked.** Submission is irreversible and Cancel is the only
-   exit and is itself one-way. `SummaryPage.ts` exposes **no** submit method and must never gain
-   one. AC22 is asserted by inspecting the gate's presence and initial state only.
+1. **The creation journey submits the finished application** (`app/summary/submit`), by
+   product-owner decision — every run produces one submitted account-opening request in UAT.
+   Submission is irreversible. `SummaryPage.submitApplication()` is called ONLY from
+   `staff-account-creation.spec.ts`, and only on the application that run created. Never point it
+   at a seed or an application you did not create this run.
 2. **Application Cancel is never invoked.**
 
 Also: Driving Licence and Voter Id verification are **real government lookups** — negative probes

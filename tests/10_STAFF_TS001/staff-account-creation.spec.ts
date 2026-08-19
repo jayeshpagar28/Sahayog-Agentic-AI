@@ -52,11 +52,12 @@ import { CBS_ACCOUNT_NUMBER, LEAD_STAFF_CODE, INTRODUCER_NAME, SYNTHETIC } from 
  *
  * ## Safety
  *
- * ⚠️ Creates a REAL application and sends REAL SMS. Each gate is capped at 3 attempts.
+ * ⚠️ Creates a REAL application, sends REAL SMS, and SUBMITS the finished application. Each run
+ *    therefore produces one submitted account-opening request (UAT). Submission is irreversible.
+ *    This is intentional — the journey completes the account end to end by product-owner decision.
+ * ⚠️ Each gate is capped at 3 attempts.
  * ⚠️ A mobile number may hold only ONE application in process; the server rejects a second with
  *    "Mobile verification request is already in process !".
- * ⚠️ The Summary's Submit is inspected, never clicked — submission is irreversible and Cancel is
- *    the only exit and is itself one-way.
  *
  * Run:  STAFF_SEED_MOBILE=<10-digit> npm run staff:create
  */
@@ -479,7 +480,7 @@ test.describe('STAFF_TS001 - Staff Salary Account creation (cold, every step)', 
     await journey.expectAdvancedTo(WorkflowConfig.SUMMARY_STEP_LABEL, 90000);
   });
 
-  test('CREATE-15: Summary renders the application; its gate is inspected, never clicked', async ({ page }) => {
+  test('CREATE-15: Summary renders the application, then submit it', async ({ page }) => {
     const summary = new SummaryPage(page);
     await staffPage.openStep(WorkflowConfig.SUMMARY_STEP_LABEL);
 
@@ -491,19 +492,30 @@ test.describe('STAFF_TS001 - Staff Salary Account creation (cold, every step)', 
     expect(text).toContain(SYNTHETIC.address.pinCode);
     expect(text).toContain(SYNTHETIC.nominee.fullName);
 
+    // D-43 recorded on the way past — the gate that should exist but does not.
     console.log(
       `[Summary omissions] images=${await summary.countRenderedImages()} ` +
         `consentControls=${await summary.countConsentControls()} ` +
         `submitEnabled=${await summary.isSubmitEnabled()}`,
     );
 
-    // ⚠️ AC22 / D-43 — state only. Submit is NEVER clicked.
-    expect(await summary.isSubmitEnabled(), 'D-43: Submit is enabled from load, ungated').toBe(true);
+    // ⚠️ IRREVERSIBLE — finalise the application. This is deliberate: the creation journey
+    // completes the account end to end. Verified live on SAH-1003-818 (2026-08-19): submit
+    // returns ENDMOD_200 / success TRUE, with no confirmation dialog, and the application
+    // moves from Pending to Submitted.
+    const result = await summary.submitApplication();
 
-    banner('APPLICATION COMPLETE', [
+    expect(result.success, `submit should succeed — got ${JSON.stringify(result)}`).toBe('TRUE');
+    expect(result.msgCode).toBe('ENDMOD_200');
+
+    // The app redirects to the dashboard on a successful submit.
+    await expect(page).toHaveURL(/\/UNPOSTED/, { timeout: 30000 });
+
+    banner('APPLICATION SUBMITTED', [
       `Applicant Id : ${applicantId}`,
-      'Parked on    : Summary — all 13 steps complete, NOT submitted',
-      '⚠️  Never submit or cancel this application.',
+      `Result       : ${result.msgCode} — ${result.success}`,
+      `Message      : ${result.msgDescr}`,
+      'Status       : Submitted (moved out of Pending)',
     ]);
   });
 });
