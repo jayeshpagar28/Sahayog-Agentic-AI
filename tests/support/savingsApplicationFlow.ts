@@ -288,6 +288,17 @@ export async function findApplicationId(page: Page, scheme: 'silver' | 'normal',
     page.off('response', onResponse);
 
     if (found) return found;
+
+    // Fallback: read the row straight from the dashboard table. The network scan above depends
+    // on the exact shape of the app/activity/list payload; the rendered row is more reliable —
+    // find the Pending row carrying this mobile and this scheme code, and pull its SAH id.
+    const fromDom = await page
+      .locator(`tbody tr:has-text("${mobile}"):has-text("SAH-${schemeCode}-")`)
+      .first()
+      .innerText()
+      .then((t) => t.match(new RegExp(`SAH-${schemeCode}-\\d+`))?.[0])
+      .catch(() => undefined);
+    if (fromDom) return fromDom;
   }
   return undefined;
 }
