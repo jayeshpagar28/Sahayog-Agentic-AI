@@ -5,134 +5,103 @@ Plan: `specs/STAFF_TS001-test-plan.md` · Report: `reports/STAFF_TS001-test-repo
 
 ---
 
-## Why this suite is banded
+## How this suite tests account creation
 
-This runs against a **live, shared UAT that opens real bank accounts**. Three steps are
-human-only gates (SMS OTP, DigiLocker consent, Liveliness), each capped at three attempts and
-each sending a real SMS to a real person. So "run everything in CI" is the wrong goal — the
-right question is *does this test write to a real application?*
+Account creation is tested by **creating a brand-new application and walking every step of it**,
+in order, filling and submitting each form — never by inspecting a pre-built application
+read-only. Inspecting a stored application proves only that saved values render; it cannot prove
+a form validates, that a step advances, or that Introducer/Lead Details work at all (both are
+`isEditable: 0` and lock permanently once submitted, so on any completed application their forms
+can never be re-opened).
 
-| Band | Mutates? | Runs in CI | Requires |
-|---|---|---|---|
-| **A — cold-safe** | no | ✅ always | nothing |
-| **B — read-only** | no | ✅ when a seed is configured | `STAFF_SEED_APPLICANT_ID` |
-| **C — form-entry** | **yes** | ❌ never | `STAFF_MUTABLE_SEED_ID` (local only) |
-| **D — seed builder** | **yes** | ❌ never | a human + a handset |
+| Spec | Runs in CI | What it covers |
+|---|---|---|
+| `scheme-selection` | ✅ always | Scheme list, server-side search — creates no record |
+| `mobile-verification` | ✅ always | Mobile-number validation up to (not including) Send — creates no record |
+| `console-network-hygiene` | ✅ always | No console errors / no 4xx-5xx on the reachable journey |
+| `staff-account-creation` | ⚠️ on demand | The full journey — creates a REAL application, every step |
 
-### Band A — cold-safe (always CI)
-`scheme-selection` · `mobile-verification` · `console-network-hygiene`
+`staff-account-creation.spec.ts` is the heart of the suite: 15 ordered steps that create an
+application and drive it from Mobile Verification through to the Summary, asserting each form as
+it is filled.
 
-Creates no record, sends no SMS, consumes no verification attempt. Stops immediately before
-"Send Verification Code". Safe to run on every commit, repeatedly.
+---
 
-### Band B — read-only (CI when seeded)
-`staff-scheme-structure` · `summary-review`
+## The three gates, and how each is satisfied
 
-Resumes a completed seed and **inspects** it. Idempotent — it writes nothing, so it can run on
-every commit without degrading the seed. Structural claims are asserted against
-`aos/steps/getdetails` rather than the DOM, which is both stronger evidence and far less brittle.
+Scheme 1003 cannot be created without external input, but the script does all the browser work
+and treats the **workflow's own status** as truth — never a human's "done":
 
-### Band C — form-entry (never CI)
-`address-details` · `nominee-details` · `applicant-photo` · `introducer-lead`
+| Gate | How it is satisfied |
+|---|---|
+| **1. SMS OTP** | Supplied by whichever source is configured (below). |
+| **2. DigiLocker consent** | The script clicks "Send Link", then **polls the application** until the card reads `Successful`. Consent happens on the applicant's device; the script never asks anyone to confirm. |
+| **3. Liveliness check** | Same pattern — send the link, then poll status to `Successful`. |
 
-These fill and submit forms on a real application, so they are **not idempotent**: the first
-run consumes the seed by advancing it, and every later run finds the step submitted and
-read-only. Pointing them at a shared CI seed would either corrupt it or produce failures that
-say nothing about the product.
+**OTP sources**, in priority order — this is what lets the flow run unattended in CI:
 
-They therefore require `STAFF_MUTABLE_SEED_ID` — a seed **explicitly nominated as consumable**,
-deliberately a different variable from the read-only seed so a CI seed can never be spent by
-accident.
+1. `STAFF_OTP` — a literal code the caller / CI injects.
+2. `STAFF_OTP_URL` — an endpoint the script polls; its body carries the code (an SMS-receiver
+   webhook or a test-harness relay). A 4–8 digit code is extracted from the response.
+3. `.staff-otp-input.txt` — a human reads the SMS and writes the code (the local default).
 
-### Band D — seed builder (never CI)
-`seed-application-builder`
-
-Excluded from suite runs in `playwright.config.ts` — it must be invoked by path, because it
-creates a real application and sends real SMS.
+The creation spec skips **only** when no OTP source is configured — never merely because the
+environment is CI.
 
 ---
 
 ## Environment variables
 
-| Variable | Band | Purpose |
+| Variable | Kind | Purpose |
 |---|---|---|
-| `STAFF_SEED_APPLICANT_ID` | B | A completed application, inspected read-only. Ideally parked on the Summary. |
-| `STAFF_MUTABLE_SEED_ID` | C | A seed you are willing to **spend**. Must be parked *before* the steps under test. |
-| `STAFF_CBS_ACCOUNT` | C | A Core Banking System account number that resolves. An invalid one fails *silently* (D-31). |
-| `STAFF_LEAD_CODE` | C | A staff code the staff register resolves. |
-| `STAFF_INTRODUCER_NAME` | C | The real account holder's name. **Never hardcode** — it is real PII. |
-| `STAFF_SEED_MOBILE` | D | A handset you control that receives the OTP and links. |
+| `SAHAYOG_USER_ID` / `SAHAYOG_PASSWORD` | Secret | `auth.setup.ts` login. Required — the storage-state file is not committed. |
+| `STAFF_SEED_MOBILE` | Variable | A handset that receives the OTP and the two links. |
+| `STAFF_OTP` **or** `STAFF_OTP_URL` | Secret | Supplies the OTP unattended. Omit both and the flow skips. |
+| `STAFF_CBS_ACCOUNT` | Secret | An account number the Core Banking System resolves (Introducer). Invalid → silent failure (D-31). |
+| `STAFF_LEAD_CODE` | Secret | A staff code the staff register resolves (Lead Details). |
+| `STAFF_INTRODUCER_NAME` | Secret | The real account holder's name. **Never hardcode** — it is real PII. |
+
+Locally these come from a gitignored `.env.local` (loaded by `playwright.config.ts`); in CI they
+are GitHub Secrets/Variables. An explicit `KEY=... npx playwright test` still overrides both.
 
 ---
 
 ## Running
 
 ```bash
-npm run staff:ci         # Bands A+B. Safe on every commit.
-npm run staff:readonly   # Bands A+B explicitly, headless.
-npm run staff:local      # Everything available locally, headed.
-npm run staff:seed       # Band D — build a new seed (attended, ~30-40 min).
+npm run staff:ci        # CI band — scheme selection, mobile validation, hygiene. No record, no SMS.
+npm run staff:cold      # the same band, headed, for local debugging.
+npm run staff:create    # the full account-creation journey (headed). Sends real SMS.
 ```
 
-CI example:
+`npm run staff:create` prints what it needs at each gate. Locally, relay the OTP by writing it to
+`.staff-otp-input.txt`; DigiLocker and liveliness are done on the handset and detected by polling.
 
-```yaml
-- run: npx playwright install --with-deps chromium
-- run: npm run staff:ci
-  env:
-    CI: true
-    SAHAYOG_USER_ID:  ${{ secrets.SAHAYOG_USER_ID }}
-    SAHAYOG_PASSWORD: ${{ secrets.SAHAYOG_PASSWORD }}
-    STAFF_SEED_APPLICANT_ID: ${{ vars.STAFF_SEED_APPLICANT_ID }}
-```
-
-Omit `STAFF_SEED_APPLICANT_ID` and Band B skips with a stated reason rather than failing —
-CI stays green and honest.
-
----
-
-## Building a seed
-
-```bash
-STAFF_SEED_MOBILE=<10-digit> npm run staff:seed
-```
-
-Pauses at each human gate and prints what it needs; relay by writing the named signal file
-(`.staff-otp-input.txt`, `.staff-digilocker-done.txt`, `.staff-liveliness-done.txt`). It stops
-at Address Details and prints the new Applicant Id.
-
-**Seeds are not durable.** They live on a shared environment where other people work: the
-previous seed `SAH-1003-812` was cancelled ("Sourcer Cancel") by a third party mid-session,
-which blocked the entire resume band. Expect to rebuild.
+In CI the account-creation journey runs only via **manual dispatch** of the workflow (it creates a
+real application and sends real SMS on every run), with the OTP supplied through `STAFF_OTP_URL`.
 
 ---
 
 ## Two safety rules that must not be relaxed
 
 1. **The Summary's Submit is never clicked.** Submission is irreversible and Cancel is the only
-   exit and is itself one-way. `SummaryPage.ts` deliberately exposes **no** submit method and
-   must never gain one. AC22 is asserted by inspecting the gate's presence and initial state.
+   exit and is itself one-way. `SummaryPage.ts` exposes **no** submit method and must never gain
+   one. AC22 is asserted by inspecting the gate's presence and initial state only.
 2. **Application Cancel is never invoked.**
 
-Also: Driving Licence and Voter Id verification are **real government lookups** — negative
-probes only, never a plausible document number.
+Also: Driving Licence and Voter Id verification are **real government lookups** — negative probes
+only, never a plausible document number.
+
+A mobile number may hold only **one** application in process; the server rejects a second with
+"Mobile verification request is already in process !". Finish or cancel the current one before
+creating another on the same number.
 
 ---
 
-## Expected failures
+## Defects surfaced by the creation walk
 
-Cases carrying `test.fail()` assert the story's **required** behaviour against a known defect,
-so the suite goes green the moment the product is fixed. A case reported as
-*"Expected to fail, but passed"* means either the defect was fixed — retire the annotation and
-close the defect — **or the test's own oracle broke**. Check the second before believing the
-first: an under-reading oracle produced a false "D-15 is fixed" signal during development,
-because the PrimeReact dropdown panel is virtualised and a locator read returned 1 of 33 items.
-
----
-
-## Known precondition tension
-
-Form-entry cases need a seed parked **before** a step; Summary cases need one parked **after**
-it. One seed cannot satisfy both. The suite handles this by checking `stepStatus` from
-`aos/steps/getdetails` and skipping with the seed's actual position — so a mismatch reports as
-a precondition gap, never as a misleading failure.
+The journey logs `[D-xx]` observations as it passes each step — the state master data (D-15,
+D-16), the `spouse_name` cap (D-24), the fractional nominee age (D-30), the Lead-code field loss
+(D-34), the silent empty Document Upload (D-35), and the Summary omissions (D-36/39/40) and
+missing declaration gate (D-43). These are recorded from a freshly-created application, not
+inferred from a seed. The full defect log is in `reports/STAFF_TS001-test-report.md`.

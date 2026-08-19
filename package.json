@@ -5,10 +5,8 @@
   "main": "index.js",
   "scripts": {
     "staff:ci": "playwright test tests/10_STAFF_TS001 --project=chromium",
-    "staff:local": "playwright test tests/10_STAFF_TS001 --project=chromium --headed --workers=1",
-    "staff:readonly": "playwright test tests/10_STAFF_TS001/scheme-selection.spec.ts tests/10_STAFF_TS001/mobile-verification.spec.ts tests/10_STAFF_TS001/console-network-hygiene.spec.ts tests/10_STAFF_TS001/staff-scheme-structure.spec.ts tests/10_STAFF_TS001/summary-review.spec.ts --project=chromium",
-    "staff:seed": "playwright test tests/10_STAFF_TS001/seed-application-builder.spec.ts --project=seed-builder --headed --workers=1",
-    "staff:journey": "playwright test tests/10_STAFF_TS001/staff-salary-journey.spec.ts --project=chromium-camera --workers=1"
+    "staff:create": "playwright test tests/10_STAFF_TS001/staff-account-creation.spec.ts --project=chromium-camera --headed --workers=1",
+    "staff:cold": "playwright test tests/10_STAFF_TS001 --project=chromium --headed --workers=1"
   },
   "keywords": [],
   "author": "",
