@@ -66,7 +66,7 @@ export default defineConfig({
       // The account-creation flow runs under chromium-camera (it needs the fake video device
       // for the signature capture) and creates a real application, so it is excluded from the
       // default project's sweep and invoked deliberately by path (`npm run staff:create`).
-      testIgnore: /staff-account-creation\.spec\.ts/,
+      testIgnore: /(staff-account-creation|silver-savings-(individual|joint|minor)|normal-savings-(individual|joint|minor))\.spec\.ts/,
       use: { ...devices['Desktop Chrome'], storageState: 'tests/.auth/user.json' },
       dependencies: ['setup'],
     },
@@ -82,7 +82,7 @@ export default defineConfig({
      */
     {
       name: 'chromium-camera',
-      testMatch: /staff-account-creation\.spec\.ts/,
+      testMatch: /(staff-account-creation|silver-savings-(individual|joint|minor)|normal-savings-(individual|joint|minor))\.spec\.ts/,
       use: {
         ...devices['Desktop Chrome'],
         storageState: 'tests/.auth/user.json',

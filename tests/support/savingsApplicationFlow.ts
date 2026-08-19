@@ -1,5 +1,5 @@
 import { type Page, test } from '@playwright/test';
-import { waitForSignalFile } from './signalFile';
+import { resolveOtp, describeOtpSource, type OtpConfig } from './otpSource';
 
 /**
  * Shared step library for the Savings Application account-opening journey (Silver 1002 /
@@ -321,12 +321,22 @@ export async function sendMobileVerification(page: Page, mobile: string): Promis
   });
 }
 
-/** Waits (via signal file) for a human to relay the real, SMS-delivered OTP, then submits it. */
-export async function waitForAndSubmitOtp(page: Page, signalFilePath: string, timeoutMs = 5 * 60 * 1000): Promise<void> {
+/**
+ * Resolves the OTP from whichever source is configured, then submits it.
+ *
+ * Accepts either an OtpConfig (literal env / endpoint / signal file) or a bare signal-file path
+ * for backward compatibility. The pluggable form is what lets CI supply the OTP unattended.
+ */
+export async function waitForAndSubmitOtp(
+  page: Page,
+  otp: OtpConfig | string,
+  timeoutMs = 12 * 60 * 1000,
+): Promise<void> {
+  const config: OtpConfig = typeof otp === 'string' ? { signalFile: otp } : otp;
   await test.step('Mobile Number Verification: submit OTP', async () => {
-    console.log(`WAITING_FOR_OTP: write the code to ${signalFilePath} to continue.`);
-    const otp = await waitForSignalFile(signalFilePath, timeoutMs);
-    await page.locator('input[name="mobotp"]').fill(otp);
+    console.log(`WAITING_FOR_OTP via ${describeOtpSource(config)}`);
+    const code = await resolveOtp(config, timeoutMs);
+    await page.locator('input[name="mobotp"]').fill(code);
     await page.waitForTimeout(500);
     await outerSubmit(page);
   });
@@ -771,7 +781,8 @@ export async function fillApplicantPhoto(page: Page): Promise<void> {
 export interface SecondaryApplicantOptions {
   kind: 'joint' | 'guardian';
   data: SecondaryPersonData;
-  otpSignalFile: string;
+  /** OTP source for THIS applicant — the second person in a Joint/Minor journey has their own. */
+  otp: OtpConfig;
   /** Real application ID (e.g. "SAH-1002-809") - needed to re-navigate back into this row
    * during eKYC/Liveliness polling. */
   appId: string;
@@ -816,7 +827,7 @@ export async function fillSecondaryApplicant(page: Page, opts: SecondaryApplican
   });
 
   await sendMobileVerification(page, opts.data.mobile);
-  await waitForAndSubmitOtp(page, opts.otpSignalFile, opts.otpTimeoutMs);
+  await waitForAndSubmitOtp(page, opts.otp, opts.otpTimeoutMs);
   await completeEkyc(page, {
     appId: opts.appId,
     pollIntervalMs: opts.pollIntervalMs,

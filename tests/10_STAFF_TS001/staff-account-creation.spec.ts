@@ -132,15 +132,16 @@ const banner = (title: string, lines: string[]): void => {
 test.describe('STAFF_TS001 - Staff Salary Account creation (cold, every step)', () => {
   test.describe.configure({ mode: 'serial' });
 
-  // Skips in CI ONLY when no unattended OTP source is configured — never merely for being CI.
-  // Provide STAFF_OTP or STAFF_OTP_URL and the whole creation flow runs unattended: the eKYC
-  // and liveliness links are sent and their status polled automatically.
+  // The whole creation flow is human-assisted and never runs unattended in CI. An OTP source
+  // (STAFF_OTP / STAFF_OTP_URL) covers gate 1, but gates 2 and 3 — DigiLocker consent and the
+  // liveliness check — require a real person on a handset, which no configuration can supply.
+  // So skip in CI, always. Every record-free spec in this suite still runs in CI.
   test.skip(
-    !!process.env.CI && !hasUnattendedOtpSource(),
-    'Creating a Staff Salary Account needs an OTP. Set STAFF_OTP or STAFF_OTP_URL for CI to ' +
-      'supply it unattended; locally the OTP is read from the .staff-otp-input.txt signal file. ' +
-      '(DigiLocker consent and the liveliness check are resolved by polling the application ' +
-      'status, so they need no configuration.)',
+    !!process.env.CI,
+    'Creating a Staff Salary Account needs live human input at the DigiLocker and liveliness ' +
+      'gates (a real handset). Not runnable unattended; run locally with `npm run staff:create`. ' +
+      `(OTP source ${hasUnattendedOtpSource() ? 'is configured' : 'not configured'}, but that ` +
+      'only covers gate 1 of 3.)',
   );
 
   const MOBILE = process.env.STAFF_SEED_MOBILE ?? '';

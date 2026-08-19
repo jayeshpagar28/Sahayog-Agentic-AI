@@ -6,7 +6,13 @@
   "scripts": {
     "staff:ci": "playwright test tests/10_STAFF_TS001 --project=chromium",
     "staff:create": "playwright test tests/10_STAFF_TS001/staff-account-creation.spec.ts --project=chromium-camera --headed --workers=1",
-    "staff:cold": "playwright test tests/10_STAFF_TS001 --project=chromium --headed --workers=1"
+    "staff:cold": "playwright test tests/10_STAFF_TS001 --project=chromium --headed --workers=1",
+    "silver:individual": "playwright test tests/8_SILVER_TS001/silver-savings-individual.spec.ts --project=chromium-camera --headed --workers=1",
+    "silver:joint": "playwright test tests/8_SILVER_TS001/silver-savings-joint.spec.ts --project=chromium-camera --headed --workers=1",
+    "silver:minor": "playwright test tests/8_SILVER_TS001/silver-savings-minor.spec.ts --project=chromium-camera --headed --workers=1",
+    "normal:individual": "playwright test tests/9_NORMAL_TS001/normal-savings-individual.spec.ts --project=chromium-camera --headed --workers=1",
+    "normal:joint": "playwright test tests/9_NORMAL_TS001/normal-savings-joint.spec.ts --project=chromium-camera --headed --workers=1",
+    "normal:minor": "playwright test tests/9_NORMAL_TS001/normal-savings-minor.spec.ts --project=chromium-camera --headed --workers=1"
   },
   "keywords": [],
   "author": "",
