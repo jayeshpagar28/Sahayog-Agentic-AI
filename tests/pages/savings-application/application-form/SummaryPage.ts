@@ -3,13 +3,19 @@ import { type Page, type Locator, expect } from '@playwright/test';
 /**
  * Summary / Review screen — the final screen before submission.
  *
- * ⚠️ SAFETY: this page object deliberately exposes **no method that clicks Submit**, and it
- * must never gain one. Submission is irreversible, Cancel is the only exit and is itself
- * one-way, and the seed applications used by this suite carry synthetic data that must never
- * reach a real account-opening pipeline. AC22 is asserted by inspecting the gate's presence
- * and initial state (`verifyDeclarationGate`), never by operating the control.
+ * ⚠️ SUBMISSION IS IRREVERSIBLE. `submitApplication()` finalises the account-opening request
+ * and cannot be undone (Cancel is the only exit and is itself one-way). It exists because the
+ * account-creation journey deliberately completes the application end to end, per an explicit
+ * product-owner decision; it is called ONLY from staff-account-creation.spec.ts, which creates
+ * a fresh application each run. Never call it against a seed or an application you did not
+ * create this run.
  *
- * The Summary is not a workflow step: it has no stepCode and no stepper tab (FR-59).
+ * Verified live on SAH-1003-818 (2026-08-19): Submit fires `POST app/summary/submit`, returns
+ * `{"msgCode":"ENDMOD_200","success":"TRUE"}`, shows NO confirmation dialog (confirming D-43),
+ * redirects to `/UNPOSTED`, and moves the application from Pending to Submitted.
+ *
+ * The Summary IS a workflow step server-side (stepCode SUMMARY, module sequence 17) — this
+ * corrects US_010 FR-59, which states otherwise.
  */
 export class SummaryPage {
   readonly page: Page;
@@ -84,5 +90,34 @@ export class SummaryPage {
   /** AC21 / D-36 — the captured photo and signature must be visible for review. */
   async countRenderedImages(): Promise<number> {
     return this.page.locator('.categorytabcontentwrap img').count();
+  }
+
+  /**
+   * ⚠️ IRREVERSIBLE — finalises the application.
+   *
+   * Clicks Submit and returns the `app/summary/submit` response body. The submission succeeds
+   * on `success: "TRUE"` / `msgCode: "ENDMOD_200"`; there is no confirmation dialog to handle.
+   * On success the app redirects to `/UNPOSTED` and the application becomes Submitted.
+   *
+   * Only staff-account-creation.spec.ts may call this, and only on the application it created
+   * this run.
+   */
+  async submitApplication(): Promise<{ success: string; msgCode: string; msgDescr: string }> {
+    const responsePromise = this.page.waitForResponse(
+      (r) => r.url().includes('app/summary/submit'),
+      { timeout: 60000 },
+    );
+
+    await this.submitButton.click();
+
+    const response = await responsePromise;
+    const body = (await response.json()) as { resultVO?: Record<string, unknown> };
+    const result = (body.resultVO ?? {}) as Record<string, unknown>;
+
+    return {
+      success: String(result.success ?? ''),
+      msgCode: String(result.msgCode ?? ''),
+      msgDescr: String(result.msgDescr ?? ''),
+    };
   }
 }

@@ -2,6 +2,7 @@ name: Playwright Tests
 on:
   push:
     branches: [ main, master ]
+  workflow_dispatch:   # manual trigger for the account-creation job (real SMS)
 jobs:
   test:
     timeout-minutes: 60
@@ -19,7 +20,46 @@ jobs:
       # Firefox and WebKit are excluded on this runner. Firefox needs the VC++
       # Redistributable (msvcp140_1.dll) which isn't installed on the host
       # machine yet; WebKit is dropped to keep CI to a single, fast browser.
+      #
+      # --project=chromium runs the record-free coverage (scheme selection,
+      # mobile-number validation, console/network hygiene). The full account-
+      # creation journey lives under the chromium-camera project and is NOT run
+      # here — it creates a real application and sends real SMS on every run, so
+      # it belongs in the on-demand job below, not on every push.
       run: npx playwright test --project=chromium
+      env:
+        # auth.setup.ts writes tests/.auth/user.json at runtime — that file is no
+        # longer committed (it held a live session JWT), so without these every
+        # test fails on an unauthenticated session rather than skipping.
+        SAHAYOG_USER_ID: ${{ secrets.SAHAYOG_USER_ID }}
+        SAHAYOG_PASSWORD: ${{ secrets.SAHAYOG_PASSWORD }}
+
+  # Full Staff Salary Account creation — creates a REAL application and sends REAL
+  # SMS, so it runs only on manual dispatch, never on push. Provide the OTP through
+  # STAFF_OTP_URL (an SMS-receiver/relay endpoint the script polls) or STAFF_OTP (a
+  # literal code); DigiLocker and liveliness are resolved by polling the workflow's
+  # own status and need no configuration. Without an OTP source the flow skips.
+  account-creation:
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    timeout-minutes: 60
+    runs-on: [self-hosted, Windows]
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: lts/*
+    - run: npm ci
+    - run: npx playwright install chromium
+    - name: Create a Staff Salary Account (every step)
+      run: npx playwright test tests/10_STAFF_TS001/staff-account-creation.spec.ts --project=chromium-camera
+      env:
+        SAHAYOG_USER_ID: ${{ secrets.SAHAYOG_USER_ID }}
+        SAHAYOG_PASSWORD: ${{ secrets.SAHAYOG_PASSWORD }}
+        STAFF_SEED_MOBILE: ${{ vars.STAFF_SEED_MOBILE }}
+        STAFF_OTP_URL: ${{ secrets.STAFF_OTP_URL }}
+        STAFF_CBS_ACCOUNT: ${{ secrets.STAFF_CBS_ACCOUNT }}
+        STAFF_LEAD_CODE: ${{ secrets.STAFF_LEAD_CODE }}
+        STAFF_INTRODUCER_NAME: ${{ secrets.STAFF_INTRODUCER_NAME }}
     - uses: actions/upload-artifact@v4
       if: ${{ !cancelled() }}
       with:

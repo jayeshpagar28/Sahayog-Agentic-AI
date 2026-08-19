@@ -33,3 +33,7 @@ node_modules/
 # Live-application artefacts containing real applicant PII - never commit
 STAFF_TS001-summary-screen.png
 summary-response.json
+
+# Local credentials / third-party fixtures - never commit
+.env.local
+.env

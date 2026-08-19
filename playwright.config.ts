@@ -1,4 +1,37 @@
+import * as fs from 'fs';
+import * as path from 'path';
 import { defineConfig, devices } from '@playwright/test';
+
+/**
+ * Loads `.env.local` into process.env for local runs.
+ *
+ * Credentials and third-party fixtures (the CBS account, the staff code, the introducer's real
+ * name) must not be committed — the introducer name is a real person's, and the project forbids
+ * recording applicant PII. Locally they live in a gitignored file; in CI they arrive as GitHub
+ * Secrets/Variables. Existing environment variables always win, so an explicit
+ * `STAFF_MUTABLE_SEED_ID=... npx playwright test` still overrides the file.
+ *
+ * Hand-parsed rather than pulling in `dotenv` — this needs no dependency and the format is
+ * KEY=VALUE with # comments.
+ */
+function loadLocalEnv(): void {
+  const envPath = path.join(__dirname, '.env.local');
+  if (!fs.existsSync(envPath)) return;
+
+  for (const line of fs.readFileSync(envPath, 'utf8').split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+
+    const eq = trimmed.indexOf('=');
+    if (eq < 1) continue;
+
+    const key = trimmed.slice(0, eq).trim();
+    const value = trimmed.slice(eq + 1).trim();
+    if (!(key in process.env)) process.env[key] = value;
+  }
+}
+
+loadLocalEnv();
 
 /**
  * @see https://playwright.dev/docs/test-configuration
@@ -30,28 +63,26 @@ export default defineConfig({
 
     {
       name: 'chromium',
-      // Excluded from routine runs:
-      //  - applicant-photo: needs the fake video device supplied by chromium-camera below.
-      //  - seed-application-builder: NOT a regression test. It creates a real application and
-      //    sends real SMS to a real handset, consuming attempt budgets capped at 3. Run it
-      //    deliberately by path, never as part of a suite sweep.
-      testIgnore: /(applicant-photo|staff-salary-journey|seed-application-builder)\.spec\.ts/,
+      // The account-creation flow runs under chromium-camera (it needs the fake video device
+      // for the signature capture) and creates a real application, so it is excluded from the
+      // default project's sweep and invoked deliberately by path (`npm run staff:create`).
+      testIgnore: /staff-account-creation\.spec\.ts/,
       use: { ...devices['Desktop Chrome'], storageState: 'tests/.auth/user.json' },
       dependencies: ['setup'],
     },
 
     /**
-     * Camera-dependent specs (STAFF_TS001's Applicant Photo step).
+     * The full account-creation journey.
      *
-     * The Applicant Photo step offers no <input type="file"> at all — capture is the only
-     * path for both the photo and the signature — so a fake video device is mandatory.
-     * Two prerequisites, both learned the hard way during exploration: the device AND the
+     * The Applicant Photo step offers no <input type="file"> at all — capture is the only path
+     * for both the photo and the signature — so a fake video device is mandatory. Two
+     * prerequisites, both learned the hard way during exploration: the device AND the
      * permissions are required (permissions alone are not enough), and the matching browser
-     * build must be installed.
+     * build must be installed (`npx playwright install chromium`).
      */
     {
       name: 'chromium-camera',
-      testMatch: /(applicant-photo|staff-salary-journey)\.spec\.ts/,
+      testMatch: /staff-account-creation\.spec\.ts/,
       use: {
         ...devices['Desktop Chrome'],
         storageState: 'tests/.auth/user.json',
@@ -64,28 +95,6 @@ export default defineConfig({
       dependencies: ['setup'],
     },
 
-    /**
-     * Seed builder — deliberately its own project.
-     *
-     * It is excluded from `chromium` via testIgnore so a suite sweep can never create a real
-     * application or send real SMS. But testIgnore applies even when the file is named
-     * explicitly, so without a project of its own the builder becomes unrunnable ("No tests
-     * found"). This project is the single, explicit way to invoke it.
-     */
-    {
-      name: 'seed-builder',
-      testMatch: /seed-application-builder\.spec\.ts/,
-      use: {
-        ...devices['Desktop Chrome'],
-        storageState: 'tests/.auth/user.json',
-        permissions: ['camera', 'geolocation'],
-        geolocation: { latitude: 19.076, longitude: 72.8777 },
-        launchOptions: {
-          args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'],
-        },
-      },
-      dependencies: ['setup'],
-    },
 
     {
       name: 'firefox',
