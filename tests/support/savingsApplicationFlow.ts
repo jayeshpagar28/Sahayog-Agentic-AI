@@ -379,12 +379,12 @@ interface PollOptions {
   appId: string;
   pollIntervalMs?: number;
   timeoutMs?: number;
-  /** Override for how to get back to the panel showing this eKYC/Liveliness accordion after
-   * each refresh. Defaults to `reopenApplication` (list + eye icon), which is correct for the
-   * primary applicant. The secondary applicant (Joint co-applicant / Guardian) needs a
-   * different re-entry path - resuming via the row always resets to the sub-flow's FIRST
-   * inner tab, so it must also re-open the management-table row and click the correct inner
-   * tab by name. */
+  /** Override for how to refresh this step's status between polls. Defaults to
+   * `clickInPlaceRefresh` (the page's own refresh control), which is correct for the primary
+   * applicant. The secondary applicant (Joint co-applicant / Guardian) needs a different
+   * re-entry path instead - resuming via the row always resets to the sub-flow's FIRST inner
+   * tab, so it must re-open the management-table row and click the correct inner tab by name;
+   * see `reenterSecondaryApplicantTab`. */
   reenter?: (page: Page) => Promise<void>;
 }
 
@@ -421,6 +421,15 @@ export async function reopenApplication(page: Page, appId: string): Promise<void
   await page.waitForTimeout(2000);
 }
 
+/** Clicks the page's own in-panel refresh control (top-right of the stepper header) to re-fetch
+ * this step's status in place, instead of leaving the application via the dashboard and
+ * re-entering it. Confirmed live: fires the same status-check request (e.g.
+ * `/aos/liveliness/status/details`) as the dashboard round-trip did, without navigating away. */
+async function clickInPlaceRefresh(page: Page): Promise<void> {
+  await page.locator('.refreshsec a.btn').first().click();
+  await page.waitForTimeout(1500);
+}
+
 /** The eKYC/Liveliness accordion panel is collapsed until its heading is clicked - status
  * text ("Pending"/"Successful"/"Action Required") is invisible until then. Clicks first, then
  * polls the revealed state until Successful, printing a clear prompt so a human watching the
@@ -445,7 +454,7 @@ export async function completeEkyc(page: Page, opts: PollOptions): Promise<void>
     const timeout = opts.timeoutMs ?? 8 * 60 * 1000;
     const start = Date.now();
     let resent = false;
-    const reenter = opts.reenter ?? ((p: Page) => reopenApplication(p, opts.appId));
+    const reenter = opts.reenter ?? clickInPlaceRefresh;
 
     while (Date.now() - start < timeout) {
       await page.waitForTimeout(pollInterval);
@@ -491,7 +500,7 @@ export async function completeLiveliness(page: Page, opts: PollOptions): Promise
     const pollInterval = opts.pollIntervalMs ?? 15000;
     const timeout = opts.timeoutMs ?? 8 * 60 * 1000;
     const start = Date.now();
-    const reenter = opts.reenter ?? ((p: Page) => reopenApplication(p, opts.appId));
+    const reenter = opts.reenter ?? clickInPlaceRefresh;
 
     while (Date.now() - start < timeout) {
       await page.waitForTimeout(pollInterval);
