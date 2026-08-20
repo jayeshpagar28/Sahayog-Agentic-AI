@@ -831,6 +831,13 @@ export async function fillSecondaryApplicant(page: Page, opts: SecondaryApplican
   const tableHeading = opts.kind === 'joint' ? 'Joint Applicant Details' : 'Guardian Details';
 
   await test.step(`${tableHeading}: open row`, async () => {
+    // On a fresh forward-driving run this panel shows either "+ Add" (no row yet) or "NA" (a row
+    // exists, click to open it). But re-entering a resumed application can land directly on the
+    // already-open sub-form (e.g. its Mobile Number field) with neither of those present -
+    // checking for that first avoids hanging on a click target that will never appear.
+    const alreadyOnForm = (await page.locator('input[name="applicant_mobile"]').count()) > 0;
+    if (alreadyOnForm) return;
+
     const addBtn = page.getByText('+ Add', { exact: true });
     if ((await addBtn.count()) > 0) {
       await addBtn.click();
@@ -846,13 +853,13 @@ export async function fillSecondaryApplicant(page: Page, opts: SecondaryApplican
     appId: opts.appId,
     pollIntervalMs: opts.pollIntervalMs,
     timeoutMs: opts.pollTimeoutMs,
-    reenter: reenterSecondaryApplicantTab(page, opts.appId, 'eKYC Verification'),
+    reenter: clickInPlaceRefresh,
   });
   await completeLiveliness(page, {
     appId: opts.appId,
     pollIntervalMs: opts.pollIntervalMs,
     timeoutMs: opts.pollTimeoutMs,
-    reenter: reenterSecondaryApplicantTab(page, opts.appId, 'Liveliness Verification'),
+    reenter: clickInPlaceRefresh,
   });
   await fillAddressDetails(page, opts.data.communicationAddress);
   await fillBasicDetails(page, opts.data, { includeRelationship: true, includeFundingMode: false });
