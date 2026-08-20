@@ -126,6 +126,10 @@ test.describe('NORMAL_TS001 - Minor Account (Live)', () => {
       region: 'Urban Area',
       employmentType: 'Salaried',
       designation: 'Private Company Employee',
+      expectedValue: '10000',
+      expectedNumber: '5',
+      agricultureIncome: '0',
+      otherIncome: '0',
       employmentInfo: {
         category: 'Private Sector Employee – Corporate / MNC',
         organizationName: 'Softtech Solutions',

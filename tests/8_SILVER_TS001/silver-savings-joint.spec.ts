@@ -163,7 +163,7 @@ test.describe('SILVER_TS001 - Joint Account (Live)', () => {
 
     await fillAddressDetails(page, applicant.communicationAddress);
     await selectBranch(page, { change: false });
-    await fillBasicDetails(page, applicant, { includeRelationship: false, includeFundingMode: true, modeOfOperation: 'Self' });
+    await fillBasicDetails(page, applicant, { includeRelationship: false, includeFundingMode: true, modeOfOperation: 'Jointly' });
     await fillChequeDetails(page, applicant.chequeDetails ?? { chequeNumber: '', chequeDate: '', draweeBankName: '', ifscCode: '' });
     if (applicant.employmentInfo) {
       await fillEmploymentInfo(page, applicant.employmentInfo);
