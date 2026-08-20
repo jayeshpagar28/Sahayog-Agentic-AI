@@ -991,9 +991,20 @@ export async function getSummaryText(page: Page): Promise<string> {
   return bodyText(page, 8000);
 }
 
-/** The one and only place the real, irreversible final submission is fired from. */
+/** The one and only place the real, irreversible final submission is fired from. Confirmed live:
+ * an earlier step left mandatory-field validation errors unresolved (Lead Details) and the flow
+ * never actually advanced to Summary, yet this function still clicked *a* local "Submit" button
+ * that matched the generic selector - silently "succeeding" from the caller's perspective while
+ * firing no real submission at all. Verifying the Summary/Review signature first turns that into
+ * a loud, immediate failure instead. */
 export async function finalSubmit(page: Page): Promise<{ status: number; body: string | null }[]> {
   return test.step('Summary: final Submit', async () => {
+    const text = await bodyText(page, 1500);
+    const onSummary = text.includes('Lead Details') && text.includes('Mobile Number Verification') && text.includes('Summary');
+    if (!onSummary) {
+      throw new Error('finalSubmit called but the page does not show the Summary/Review signature - an earlier step likely failed to actually advance. Refusing to click Submit.');
+    }
+
     const submitCalls: { status: number; body: string | null }[] = [];
     page.on('response', async (res) => {
       if (res.url().includes('summary/submit') && res.request().method() === 'POST') {
