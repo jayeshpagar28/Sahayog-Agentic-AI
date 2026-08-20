@@ -91,6 +91,7 @@ test.describe('NORMAL_TS001 - Minor Account (Live)', () => {
       },
       prefix: 'Master',
       gender: 'Male',
+      email: 'minor.normal@example.com',
       maritalStatus: 'Unmarried',
       fatherFirstName: 'Vishnu',
       fatherLastName: 'Joshi',
