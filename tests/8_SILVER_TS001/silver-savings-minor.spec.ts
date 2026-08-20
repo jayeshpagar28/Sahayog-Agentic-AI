@@ -1,5 +1,6 @@
 import * as path from 'path';
 import { test } from '@playwright/test';
+import { hasUnattendedOtp, type OtpSource } from '../support/signalFile';
 import {
   openNewApplication,
   findApplicationId,
@@ -32,10 +33,13 @@ import {
  * require Introducer Details (skipped gracefully by fillIntroducerDetails if the tab isn't
  * present).
  *
- * Manually-assisted: the Guardian needs Mobile OTP, DigiLocker, and Liveliness for their own
- * sub-journey (the Minor themselves uses Minor KYC Details - manual Aadhaar entry, no OTP or
- * DigiLocker of their own). See tests/support/savingsApplicationFlow.ts for how each is
- * handled. Skipped entirely in CI rather than silently omitted.
+ * The application-level Mobile OTP and the Guardian's own Mobile OTP (for their sub-journey)
+ * both follow the same unattended-capable priority chain as
+ * tests/10_STAFF_TS001/staff-account-creation.spec.ts: a literal env var -> a polled endpoint ->
+ * a local signal file (a human relays the SMS). DigiLocker/Liveliness (the Guardian's own) are
+ * resolved automatically by polling status - no human confirmation is asked for either. (The
+ * Minor themselves uses Minor KYC Details - manual Aadhaar entry, no OTP or DigiLocker of their
+ * own.) The test skips in CI ONLY when either OTP source is missing - never merely for being CI.
  */
 test.use({
   permissions: ['camera', 'geolocation'],
@@ -43,8 +47,25 @@ test.use({
   launchOptions: { args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] },
 });
 
-test.describe('SILVER_TS001 - Minor Account (Live, Manually-Assisted)', () => {
-  test.skip(!!process.env.CI, 'Manually-assisted OTP/DigiLocker/Liveliness relay - not runnable unattended in CI');
+const OTP_SOURCE: OtpSource = {
+  literal: process.env.SAHAYOG_SIL_MIN_OTP,
+  url: process.env.SAHAYOG_SIL_MIN_OTP_URL,
+  signalFile: path.join(process.cwd(), '.sil-min-otp-input.txt'),
+};
+const GUARDIAN_OTP_SOURCE: OtpSource = {
+  literal: process.env.SAHAYOG_SIL_MIN_GUARDIAN_OTP,
+  url: process.env.SAHAYOG_SIL_MIN_GUARDIAN_OTP_URL,
+  signalFile: path.join(process.cwd(), '.sil-min-guardian-otp-input.txt'),
+};
+
+test.describe('SILVER_TS001 - Minor Account (Live)', () => {
+  test.skip(
+    !!process.env.CI && !(hasUnattendedOtp(OTP_SOURCE) && hasUnattendedOtp(GUARDIAN_OTP_SOURCE)),
+    'Needs an OTP source for both the application and the Guardian to run unattended in CI. Set ' +
+      'SAHAYOG_SIL_MIN_OTP/_URL and SAHAYOG_SIL_MIN_GUARDIAN_OTP/_URL; locally OTPs are read from ' +
+      '.sil-min-otp-input.txt and .sil-min-guardian-otp-input.txt. (DigiLocker consent and ' +
+      'Liveliness are resolved by polling application status, so they need no configuration.)',
+  );
 
   test('Silver Savings Account - Minor: full live journey through real final submission', async ({ page }) => {
     const applicationMobile = process.env.SAHAYOG_SIL_MIN_MOBILE;
@@ -55,7 +76,6 @@ test.describe('SILVER_TS001 - Minor Account (Live, Manually-Assisted)', () => {
     );
 
     test.setTimeout(50 * 60 * 1000);
-    const GUARDIAN_OTP_SIGNAL_FILE = path.join(process.cwd(), '.sil-min-guardian-otp-input.txt');
 
     const minor: MinorData = {
       firstName: 'Bhushan',
@@ -125,7 +145,7 @@ test.describe('SILVER_TS001 - Minor Account (Live, Manually-Assisted)', () => {
     await openNewApplication(page, 'silver');
 
     await sendMobileVerification(page, applicationMobile!);
-    await waitForAndSubmitOtp(page, path.join(process.cwd(), '.sil-min-otp-input.txt'));
+    await waitForAndSubmitOtp(page, OTP_SOURCE);
 
     await selectAccountType(page, 'minor');
 
@@ -146,7 +166,7 @@ test.describe('SILVER_TS001 - Minor Account (Live, Manually-Assisted)', () => {
     await fillSecondaryApplicant(page, {
       kind: 'guardian',
       data: guardian,
-      otpSignalFile: GUARDIAN_OTP_SIGNAL_FILE,
+      otpSource: GUARDIAN_OTP_SOURCE,
       appId,
     });
 

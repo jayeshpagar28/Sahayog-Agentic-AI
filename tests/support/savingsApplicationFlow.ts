@@ -1,5 +1,5 @@
 import { type Page, test } from '@playwright/test';
-import { waitForSignalFile } from './signalFile';
+import { type OtpSource, resolveOtp } from './signalFile';
 
 /**
  * Shared step library for the Savings Application account-opening journey (Silver 1002 /
@@ -321,11 +321,15 @@ export async function sendMobileVerification(page: Page, mobile: string): Promis
   });
 }
 
-/** Waits (via signal file) for a human to relay the real, SMS-delivered OTP, then submits it. */
-export async function waitForAndSubmitOtp(page: Page, signalFilePath: string, timeoutMs = 5 * 60 * 1000): Promise<void> {
+/** Obtains the real, SMS-delivered OTP from whichever source is configured (literal env var ->
+ * polled endpoint -> signal file a human writes to) and submits it. The literal/endpoint
+ * sources are what let a flow run unattended in CI - see `hasUnattendedOtp` in `./signalFile`. */
+export async function waitForAndSubmitOtp(page: Page, otpSource: OtpSource, timeoutMs = 5 * 60 * 1000): Promise<void> {
   await test.step('Mobile Number Verification: submit OTP', async () => {
-    console.log(`WAITING_FOR_OTP: write the code to ${signalFilePath} to continue.`);
-    const otp = await waitForSignalFile(signalFilePath, timeoutMs);
+    if (!otpSource.literal && !otpSource.url) {
+      console.log(`WAITING_FOR_OTP: write the code to ${otpSource.signalFile} to continue.`);
+    }
+    const otp = await resolveOtp(otpSource, timeoutMs);
     await page.locator('input[name="mobotp"]').fill(otp);
     await page.waitForTimeout(500);
     await outerSubmit(page);
@@ -771,7 +775,7 @@ export async function fillApplicantPhoto(page: Page): Promise<void> {
 export interface SecondaryApplicantOptions {
   kind: 'joint' | 'guardian';
   data: SecondaryPersonData;
-  otpSignalFile: string;
+  otpSource: OtpSource;
   /** Real application ID (e.g. "SAH-1002-809") - needed to re-navigate back into this row
    * during eKYC/Liveliness polling. */
   appId: string;
@@ -816,7 +820,7 @@ export async function fillSecondaryApplicant(page: Page, opts: SecondaryApplican
   });
 
   await sendMobileVerification(page, opts.data.mobile);
-  await waitForAndSubmitOtp(page, opts.otpSignalFile, opts.otpTimeoutMs);
+  await waitForAndSubmitOtp(page, opts.otpSource, opts.otpTimeoutMs);
   await completeEkyc(page, {
     appId: opts.appId,
     pollIntervalMs: opts.pollIntervalMs,
