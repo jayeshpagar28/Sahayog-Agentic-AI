@@ -121,7 +121,7 @@ test.describe('SILVER_TS001 - Joint Account (Live)', () => {
       relationshipWithMain: 'Others',
       prefix: 'Mr',
       gender: 'Male',
-      email: 'coapplicant.silver@example.com',
+      email: 'coapplicantsilver@test.com',
       maritalStatus: 'Unmarried',
       fatherFirstName: 'Ramesh',
       fatherLastName: 'Kulkarni',

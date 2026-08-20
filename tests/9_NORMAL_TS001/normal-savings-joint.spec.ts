@@ -121,7 +121,7 @@ test.describe('NORMAL_TS001 - Joint Account (Live)', () => {
       relationshipWithMain: 'Others',
       prefix: 'Mr',
       gender: 'Male',
-      email: 'coapplicant.normal@example.com',
+      email: 'coapplicantnormal@test.com',
       maritalStatus: 'Unmarried',
       fatherFirstName: 'Ramesh',
       fatherLastName: 'Kulkarni',
