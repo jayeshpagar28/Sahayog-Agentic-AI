@@ -256,38 +256,50 @@ export async function openNewApplication(page: Page, scheme: 'silver' | 'normal'
 }
 
 /** Looks up the current application's SAH-ID by scheme + mobile via the activity list, for
- * logging/reporting purposes (the panel doesn't show it yet on a freshly-created draft). */
+ * logging/reporting purposes (the panel doesn't show it yet on a freshly-created draft). Waits
+ * directly on the `/app/activity/list` response each attempt (bounded, typically 1-3s) instead
+ * of a flat sleep, and logs progress - the old flat-sleep version could silently take 1-2
+ * minutes across its retries with nothing printed, which reads as "stuck" even when it isn't. */
 export async function findApplicationId(page: Page, scheme: 'silver' | 'normal', mobile: string): Promise<string | undefined> {
   const schemeCode = scheme === 'silver' ? '1002' : '1001';
+  const maxAttempts = 8;
 
-  for (let attempt = 0; attempt < 5; attempt++) {
-    if (attempt > 0) await page.waitForTimeout(3000);
+  const extractMatch = (content: { schemeCode: string; applicantMobile?: string; applicationId: string }[]): string | undefined =>
+    // The list is newest-first - take the first match so a stale older record sharing the same
+    // mobile (e.g. a not-yet-cancelled prior attempt) never wins over the one this run just made.
+    content.find((row) => row.schemeCode === schemeCode && String(row.applicantMobile || '').includes(mobile))?.applicationId;
 
-    let found: string | undefined;
-    const onResponse = async (res: import('@playwright/test').Response) => {
-      if (res.url().includes('/app/activity/list') && res.request().method() === 'POST') {
-        try {
-          const json = await res.json();
-          const content = JSON.parse(json.content || '[]');
-          for (const row of content) {
-            if (row.schemeCode === schemeCode && String(row.mobileNo || '').includes(mobile)) {
-              found = row.applicationId;
-            }
-          }
-        } catch {
-          /* ignore unrelated responses */
-        }
-      }
-    };
-    page.on('response', onResponse);
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    console.log(`Looking up the application ID for mobile ${mobile} (attempt ${attempt + 1}/${maxAttempts})...`);
     await page.goto('/HOME');
-    await page.waitForLoadState('networkidle').catch(() => undefined);
+    const responsePromise = page
+      .waitForResponse((res) => res.url().includes('/app/activity/list') && res.request().method() === 'POST', { timeout: 10000 })
+      .catch(() => null);
     await page.getByRole('button', { name: 'Savings Application' }).click();
-    await page.waitForURL(/\/UNPOSTED/);
-    await page.waitForTimeout(2500);
-    page.off('response', onResponse);
+    const response = await responsePromise;
 
-    if (found) return found;
+    if (response) {
+      try {
+        const json = await response.json();
+        const content = JSON.parse(json.content || '[]');
+        const found = extractMatch(content);
+        if (found) {
+          // Land back on this application's own detail page, not the bare dashboard list - the
+          // lookup necessarily passes through /UNPOSTED to read the activity list, but the caller
+          // (completeEkyc etc.) expects to already be on the application page, ready to continue
+          // the live journey without a separate re-navigation step.
+          await page.waitForURL(/\/UNPOSTED/).catch(() => undefined);
+          const row = page.locator('.p-datatable-tbody tr', { hasText: found });
+          await row.locator('svg.fa-eye').click();
+          await page.waitForURL(/\/applndetails/);
+          await page.waitForTimeout(1500);
+          return found;
+        }
+      } catch {
+        /* ignore unparsable/unrelated responses and retry */
+      }
+    }
+    await page.waitForTimeout(1500);
   }
   return undefined;
 }
