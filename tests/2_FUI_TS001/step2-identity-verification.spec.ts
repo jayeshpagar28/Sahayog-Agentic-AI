@@ -112,8 +112,8 @@ test.describe('FUI_TS001 - Full Recovery (Live, Manually-Assisted)', () => {
   test.setTimeout(11 * 60 * 1000);
 
   // Registered mobile number changed 28-Jul-2026: was 9075063434, is now 9511996248.
-  const REGISTERED_MOBILE_NUMBER = process.env.SAHAYOG_FUI_MOBILE_NUMBER ?? '9511996248';
-  const EXPECTED_USER_ID = process.env.SAHAYOG_USER_ID ?? 'nayan.aher@netwinindia.in';
+  const REGISTERED_MOBILE_NUMBER = process.env.SAHAYOG_FUI_MOBILE_NUMBER || '9511996248';
+  const EXPECTED_USER_ID = process.env.SAHAYOG_USER_ID || 'nayan.aher@netwinindia.in';
   // Confirmed field value for this account — see memory sahayog_fp_step2_test_data.
   const DATE_OF_BIRTH = '2001-05-02';
 

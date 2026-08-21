@@ -2,8 +2,8 @@ import { test, expect } from '@playwright/test';
 import { LoginPage } from '../pages/auth/LoginPage';
 import { DashboardPage } from '../pages/dashboard/DashboardPage';
 
-const VALID_USER_ID = process.env.SAHAYOG_USER_ID ?? 'nayan.aher@netwinindia.in';
-const VALID_PASSWORD = process.env.SAHAYOG_PASSWORD ?? 'Sahayog@2025';
+const VALID_USER_ID = process.env.SAHAYOG_USER_ID || 'nayan.aher@netwinindia.in';
+const VALID_PASSWORD = process.env.SAHAYOG_PASSWORD || 'Sahayog@2025';
 
 test.describe('LP_TS001 - Login Functionality', () => {
   // Override project-level storageState so the browser starts unauthenticated
