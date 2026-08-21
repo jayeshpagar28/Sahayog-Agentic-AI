@@ -119,24 +119,43 @@ export class SavingsApplicationDashboardPage {
     await this.page.getByRole('option').first().waitFor({ state: 'visible' });
   }
 
+  /** Opens a dropdown and clicks the named option, retrying the whole open+click sequence if
+   * the option list re-renders mid-click. Scheme in particular cascades off Product: selecting
+   * a Product repopulates Scheme's own option list client-side, with no distinguishable network
+   * signal to await, so a click landing right as that repopulation happens gets "element was
+   * detached from the DOM" - confirmed flaky in CI immediately after selectProduct(). Mirrors
+   * the retryDropdownSelect pattern already proven in
+   * tests/support/savingsApplicationFlow.ts for this same class of PrimeReact flakiness. */
+  private async selectDropdownOption(dropdown: Locator, name: string, exact = false): Promise<void> {
+    const maxAttempts = 3;
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        await this.openDropdownWithOptions(dropdown);
+        await this.page.getByRole('option', { name, exact }).click({ timeout: 8000 });
+        return;
+      } catch (err) {
+        if (attempt === maxAttempts - 1) throw err;
+        await this.page.keyboard.press('Escape').catch(() => undefined);
+        await this.page.waitForTimeout(500);
+      }
+    }
+  }
+
   async selectProduct(name: string): Promise<void> {
     await this.performAndWaitForListRefresh(async () => {
-      await this.openDropdownWithOptions(this.filterDropdowns.nth(0));
-      await this.page.getByRole('option', { name }).click();
+      await this.selectDropdownOption(this.filterDropdowns.nth(0), name);
     });
   }
 
   async selectScheme(name: string): Promise<void> {
     await this.performAndWaitForListRefresh(async () => {
-      await this.openDropdownWithOptions(this.filterDropdowns.nth(1));
-      await this.page.getByRole('option', { name }).click();
+      await this.selectDropdownOption(this.filterDropdowns.nth(1), name);
     });
   }
 
   async selectDatePreset(preset: DatePreset): Promise<void> {
     await this.performAndWaitForListRefresh(async () => {
-      await this.openDropdownWithOptions(this.filterDropdowns.nth(2));
-      await this.page.getByRole('option', { name: preset, exact: true }).click();
+      await this.selectDropdownOption(this.filterDropdowns.nth(2), preset, true);
     });
   }
 
