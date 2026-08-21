@@ -57,9 +57,11 @@ export class LivelinessVerificationStep {
   /**
    * Polls the live status until the applicant completes the check.
    *
-   * Reloads between polls: the badge is driven by a client-side poll that does not always
+   * Refreshes between polls: the badge is driven by a client-side poll that does not always
    * repaint when the act happens on another device, so trusting the current DOM can wait
-   * forever on an application that has already succeeded.
+   * forever on an application that has already succeeded. Uses the wizard's own in-panel
+   * refresh control rather than a full page reload - confirmed live, it fires the same
+   * status-check request without leaving the current step or losing wizard state.
    */
   async waitForSuccess(timeoutMs: number, onPoll?: (elapsedSec: number) => void): Promise<void> {
     const start = Date.now();
@@ -75,25 +77,15 @@ export class LivelinessVerificationStep {
 
       onPoll?.(Math.round((Date.now() - start) / 1000));
       await this.page.waitForTimeout(15000);
-      await this.page.reload();
-      await this.page
-        .locator('.categorytabcontentwrap')
-        .waitFor({ state: 'visible', timeout: 30000 })
-        .catch(() => undefined);
-      await this.openStepIfNeeded();
+      await this.refreshInPlace();
     }
   }
 
-  /** Re-opens this step after a reload, which lands on the wizard's current stage. */
-  private async openStepIfNeeded(): Promise<void> {
-    const tab = this.page
-      .locator('#categorytab li a')
-      .filter({ hasText: LivelinessVerificationStep.STEP_LABEL })
-      .first();
-    if (await tab.isVisible().catch(() => false)) {
-      await tab.click().catch(() => undefined);
-      await this.page.waitForTimeout(2000);
-    }
+  /** Clicks the wizard's own in-panel refresh control (top-right of the stepper header) to
+   * re-fetch this step's status in place. */
+  private async refreshInPlace(): Promise<void> {
+    await this.page.locator('.refreshsec a.btn').first().click();
+    await this.page.waitForTimeout(1500);
   }
 
   async submitStep(): Promise<void> {

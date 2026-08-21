@@ -1,5 +1,5 @@
 import { type Page, test } from '@playwright/test';
-import { resolveOtp, describeOtpSource, type OtpConfig } from './otpSource';
+import { type OtpSource, resolveOtp } from './signalFile';
 
 /**
  * Shared step library for the Savings Application account-opening journey (Silver 1002 /
@@ -256,51 +256,98 @@ export async function openNewApplication(page: Page, scheme: 'silver' | 'normal'
 }
 
 /** Looks up the current application's SAH-ID by scheme + mobile via the activity list, for
- * logging/reporting purposes (the panel doesn't show it yet on a freshly-created draft). */
+ * logging/reporting purposes (the panel doesn't show it yet on a freshly-created draft). Waits
+ * directly on the `/app/activity/list` response each attempt (bounded, typically 1-3s) instead
+ * of a flat sleep, and logs progress - the old flat-sleep version could silently take 1-2
+ * minutes across its retries with nothing printed, which reads as "stuck" even when it isn't. */
 export async function findApplicationId(page: Page, scheme: 'silver' | 'normal', mobile: string): Promise<string | undefined> {
   const schemeCode = scheme === 'silver' ? '1002' : '1001';
+  const maxAttempts = 8;
 
-  for (let attempt = 0; attempt < 5; attempt++) {
-    if (attempt > 0) await page.waitForTimeout(3000);
+  const extractMatch = (content: { schemeCode: string; applicantMobile?: string; applicationId: string }[]): string | undefined =>
+    // The list is newest-first - take the first match so a stale older record sharing the same
+    // mobile (e.g. a not-yet-cancelled prior attempt) never wins over the one this run just made.
+    content.find((row) => row.schemeCode === schemeCode && String(row.applicantMobile || '').includes(mobile))?.applicationId;
 
-    let found: string | undefined;
-    const onResponse = async (res: import('@playwright/test').Response) => {
-      if (res.url().includes('/app/activity/list') && res.request().method() === 'POST') {
-        try {
-          const json = await res.json();
-          const content = JSON.parse(json.content || '[]');
-          for (const row of content) {
-            if (row.schemeCode === schemeCode && String(row.mobileNo || '').includes(mobile)) {
-              found = row.applicationId;
-            }
-          }
-        } catch {
-          /* ignore unrelated responses */
-        }
-      }
-    };
-    page.on('response', onResponse);
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    console.log(`Looking up the application ID for mobile ${mobile} (attempt ${attempt + 1}/${maxAttempts})...`);
     await page.goto('/HOME');
-    await page.waitForLoadState('networkidle').catch(() => undefined);
+    const responsePromise = page
+      .waitForResponse((res) => res.url().includes('/app/activity/list') && res.request().method() === 'POST', { timeout: 10000 })
+      .catch(() => null);
     await page.getByRole('button', { name: 'Savings Application' }).click();
-    await page.waitForURL(/\/UNPOSTED/);
-    await page.waitForTimeout(2500);
-    page.off('response', onResponse);
+    const response = await responsePromise;
 
-    if (found) return found;
-
-    // Fallback: read the row straight from the dashboard table. The network scan above depends
-    // on the exact shape of the app/activity/list payload; the rendered row is more reliable —
-    // find the Pending row carrying this mobile and this scheme code, and pull its SAH id.
-    const fromDom = await page
-      .locator(`tbody tr:has-text("${mobile}"):has-text("SAH-${schemeCode}-")`)
-      .first()
-      .innerText()
-      .then((t) => t.match(new RegExp(`SAH-${schemeCode}-\\d+`))?.[0])
-      .catch(() => undefined);
-    if (fromDom) return fromDom;
+    if (response) {
+      try {
+        const json = await response.json();
+        const content = JSON.parse(json.content || '[]');
+        const found = extractMatch(content);
+        if (found) {
+          // Land back on this application's own detail page, not the bare dashboard list - the
+          // lookup necessarily passes through /UNPOSTED to read the activity list, but the caller
+          // (completeEkyc etc.) expects to already be on the application page, ready to continue
+          // the live journey without a separate re-navigation step.
+          await page.waitForURL(/\/UNPOSTED/).catch(() => undefined);
+          const row = page.locator('.p-datatable-tbody tr', { hasText: found });
+          await row.locator('svg.fa-eye').click();
+          await page.waitForURL(/\/applndetails/);
+          await page.waitForTimeout(1500);
+          return found;
+        }
+      } catch {
+        /* ignore unparsable/unrelated responses and retry */
+      }
+    }
+    await page.waitForTimeout(1500);
   }
   return undefined;
+}
+
+/** Finds the Pending application (for the given scheme) with the most stepper progress, for
+ * tests that need to resume a real, far-progressed application to exercise its navigation -
+ * without depending on one specific hardcoded application ID. A hardcoded ID is fragile on this
+ * shared live UAT environment: any Pending application's status can change at any time (moved to
+ * Submitted, Decisioned, or cancelled) by a real bank officer or workflow entirely outside this
+ * project's control, and both Silver's and Normal's navigation specs have already needed manual
+ * fixture rotation more than once for exactly this reason. Picking the deepest-progressed
+ * candidate at run time self-heals across that churn instead of needing another rotation every
+ * time the current fixture moves on. */
+export async function findDeepestPendingApplication(page: Page, schemeCode: '1001' | '1002' | '1003'): Promise<string> {
+  interface ActivityRow {
+    schemeCode: string;
+    applicationId: string;
+    currentModuleSequence: number;
+  }
+  let candidates: ActivityRow[] = [];
+  const onResponse = async (res: import('@playwright/test').Response) => {
+    if (res.url().includes('/app/activity/list') && res.request().method() === 'POST') {
+      try {
+        const json = await res.json();
+        const content: ActivityRow[] = JSON.parse(json.content || '[]');
+        candidates = content.filter((row) => row.schemeCode === schemeCode);
+      } catch {
+        /* ignore unparsable/unrelated responses */
+      }
+    }
+  };
+
+  page.on('response', onResponse);
+  await page.goto('/HOME');
+  await page.waitForLoadState('networkidle').catch(() => undefined);
+  await page.getByRole('button', { name: 'Savings Application' }).click();
+  await page.waitForURL(/\/UNPOSTED/);
+  await page.waitForTimeout(2500);
+  page.off('response', onResponse);
+
+  if (candidates.length === 0) {
+    throw new Error(
+      `No Pending application found for scheme ${schemeCode} - these navigation tests need at least one real, far-progressed Pending application to resume. Create one (e.g. via the dedicated live-flow specs) and leave it unsubmitted.`,
+    );
+  }
+
+  const deepest = candidates.reduce((best, row) => (row.currentModuleSequence > best.currentModuleSequence ? row : best));
+  return deepest.applicationId;
 }
 
 // ---------------------------------------------------------------------------
@@ -332,55 +379,18 @@ export async function sendMobileVerification(page: Page, mobile: string): Promis
   });
 }
 
-/**
- * Resolves the OTP from whichever source is configured, then submits it.
- *
- * Accepts either an OtpConfig (literal env / endpoint / signal file) or a bare signal-file path
- * for backward compatibility. The pluggable form is what lets CI supply the OTP unattended.
- */
-export async function waitForAndSubmitOtp(
-  page: Page,
-  otp: OtpConfig | string,
-  timeoutMs = 12 * 60 * 1000,
-): Promise<void> {
-  const config: OtpConfig = typeof otp === 'string' ? { signalFile: otp } : otp;
+/** Obtains the real, SMS-delivered OTP from whichever source is configured (literal env var ->
+ * polled endpoint -> signal file a human writes to) and submits it. The literal/endpoint
+ * sources are what let a flow run unattended in CI - see `hasUnattendedOtp` in `./signalFile`. */
+export async function waitForAndSubmitOtp(page: Page, otpSource: OtpSource, timeoutMs = 5 * 60 * 1000): Promise<void> {
   await test.step('Mobile Number Verification: submit OTP', async () => {
-    // The app caps OTP entry at 3 attempts. We mirror that: if a submitted code is rejected
-    // (the OTP field stays on screen instead of the Account Type step appearing), we re-wait
-    // for a corrected code from the same source rather than blindly marching on with a wrong
-    // OTP — which previously hung the very next step (selectAccountType) for the full test
-    // timeout. A literal/endpoint source that keeps returning the same value is bounded by the
-    // 3-attempt cap so it can't loop forever.
-    const deadline = Date.now() + timeoutMs;
-    const otpField = page.locator('input[name="mobotp"]');
-    const maxAttempts = 3;
-
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      const remaining = deadline - Date.now();
-      if (remaining <= 0) throw new Error(`Timed out after ${Math.round(timeoutMs / 1000)}s waiting for a valid OTP.`);
-
-      console.log(`WAITING_FOR_OTP via ${describeOtpSource(config)} (attempt ${attempt}/${maxAttempts})`);
-      const code = await resolveOtp(config, remaining);
-      await otpField.fill('');
-      await otpField.fill(code);
-      await page.waitForTimeout(500);
-      await outerSubmit(page);
-
-      // Success == the OTP field leaves the DOM (screen advanced to Account Type). If it is
-      // still present after the submit settles, the code was wrong/expired — loop for a new one.
-      const verified = await otpField
-        .waitFor({ state: 'detached', timeout: 15000 })
-        .then(() => true)
-        .catch(() => false);
-      if (verified) {
-        console.log(`OTP accepted on attempt ${attempt}.`);
-        return;
-      }
-
-      console.log(`OTP "${code}" was rejected (attempt ${attempt}/${maxAttempts}); waiting for a corrected code...`);
+    if (!otpSource.literal && !otpSource.url) {
+      console.log(`WAITING_FOR_OTP: write the code to ${otpSource.signalFile} to continue.`);
     }
-
-    throw new Error(`OTP rejected ${maxAttempts} times — the app's attempt limit is reached. Restart the flow with a fresh code.`);
+    const otp = await resolveOtp(otpSource, timeoutMs);
+    await page.locator('input[name="mobotp"]').fill(otp);
+    await page.waitForTimeout(500);
+    await outerSubmit(page);
   });
 }
 
@@ -415,12 +425,12 @@ interface PollOptions {
   appId: string;
   pollIntervalMs?: number;
   timeoutMs?: number;
-  /** Override for how to get back to the panel showing this eKYC/Liveliness accordion after
-   * each refresh. Defaults to `reopenApplication` (list + eye icon), which is correct for the
-   * primary applicant. The secondary applicant (Joint co-applicant / Guardian) needs a
-   * different re-entry path - resuming via the row always resets to the sub-flow's FIRST
-   * inner tab, so it must also re-open the management-table row and click the correct inner
-   * tab by name. */
+  /** Override for how to refresh this step's status between polls. Defaults to
+   * `clickInPlaceRefresh` (the page's own refresh control), which is correct for the primary
+   * applicant. The secondary applicant (Joint co-applicant / Guardian) needs a different
+   * re-entry path instead - resuming via the row always resets to the sub-flow's FIRST inner
+   * tab, so it must re-open the management-table row and click the correct inner tab by name;
+   * see `reenterSecondaryApplicantTab`. */
   reenter?: (page: Page) => Promise<void>;
 }
 
@@ -457,6 +467,15 @@ export async function reopenApplication(page: Page, appId: string): Promise<void
   await page.waitForTimeout(2000);
 }
 
+/** Clicks the page's own in-panel refresh control (top-right of the stepper header) to re-fetch
+ * this step's status in place, instead of leaving the application via the dashboard and
+ * re-entering it. Confirmed live: fires the same status-check request (e.g.
+ * `/aos/liveliness/status/details`) as the dashboard round-trip did, without navigating away. */
+async function clickInPlaceRefresh(page: Page): Promise<void> {
+  await page.locator('.refreshsec a.btn').first().click();
+  await page.waitForTimeout(1500);
+}
+
 /** The eKYC/Liveliness accordion panel is collapsed until its heading is clicked - status
  * text ("Pending"/"Successful"/"Action Required") is invisible until then. Clicks first, then
  * polls the revealed state until Successful, printing a clear prompt so a human watching the
@@ -481,7 +500,7 @@ export async function completeEkyc(page: Page, opts: PollOptions): Promise<void>
     const timeout = opts.timeoutMs ?? 8 * 60 * 1000;
     const start = Date.now();
     let resent = false;
-    const reenter = opts.reenter ?? ((p: Page) => reopenApplication(p, opts.appId));
+    const reenter = opts.reenter ?? clickInPlaceRefresh;
 
     while (Date.now() - start < timeout) {
       await page.waitForTimeout(pollInterval);
@@ -527,7 +546,7 @@ export async function completeLiveliness(page: Page, opts: PollOptions): Promise
     const pollInterval = opts.pollIntervalMs ?? 15000;
     const timeout = opts.timeoutMs ?? 8 * 60 * 1000;
     const start = Date.now();
-    const reenter = opts.reenter ?? ((p: Page) => reopenApplication(p, opts.appId));
+    const reenter = opts.reenter ?? clickInPlaceRefresh;
 
     while (Date.now() - start < timeout) {
       await page.waitForTimeout(pollInterval);
@@ -823,8 +842,7 @@ export async function fillApplicantPhoto(page: Page): Promise<void> {
 export interface SecondaryApplicantOptions {
   kind: 'joint' | 'guardian';
   data: SecondaryPersonData;
-  /** OTP source for THIS applicant — the second person in a Joint/Minor journey has their own. */
-  otp: OtpConfig;
+  otpSource: OtpSource;
   /** Real application ID (e.g. "SAH-1002-809") - needed to re-navigate back into this row
    * during eKYC/Liveliness polling. */
   appId: string;
@@ -859,6 +877,13 @@ export async function fillSecondaryApplicant(page: Page, opts: SecondaryApplican
   const tableHeading = opts.kind === 'joint' ? 'Joint Applicant Details' : 'Guardian Details';
 
   await test.step(`${tableHeading}: open row`, async () => {
+    // On a fresh forward-driving run this panel shows either "+ Add" (no row yet) or "NA" (a row
+    // exists, click to open it). But re-entering a resumed application can land directly on the
+    // already-open sub-form (e.g. its Mobile Number field) with neither of those present -
+    // checking for that first avoids hanging on a click target that will never appear.
+    const alreadyOnForm = (await page.locator('input[name="applicant_mobile"]').count()) > 0;
+    if (alreadyOnForm) return;
+
     const addBtn = page.getByText('+ Add', { exact: true });
     if ((await addBtn.count()) > 0) {
       await addBtn.click();
@@ -869,18 +894,18 @@ export async function fillSecondaryApplicant(page: Page, opts: SecondaryApplican
   });
 
   await sendMobileVerification(page, opts.data.mobile);
-  await waitForAndSubmitOtp(page, opts.otp, opts.otpTimeoutMs);
+  await waitForAndSubmitOtp(page, opts.otpSource, opts.otpTimeoutMs);
   await completeEkyc(page, {
     appId: opts.appId,
     pollIntervalMs: opts.pollIntervalMs,
     timeoutMs: opts.pollTimeoutMs,
-    reenter: reenterSecondaryApplicantTab(page, opts.appId, 'eKYC Verification'),
+    reenter: clickInPlaceRefresh,
   });
   await completeLiveliness(page, {
     appId: opts.appId,
     pollIntervalMs: opts.pollIntervalMs,
     timeoutMs: opts.pollTimeoutMs,
-    reenter: reenterSecondaryApplicantTab(page, opts.appId, 'Liveliness Verification'),
+    reenter: clickInPlaceRefresh,
   });
   await fillAddressDetails(page, opts.data.communicationAddress);
   await fillBasicDetails(page, opts.data, { includeRelationship: true, includeFundingMode: false });
@@ -1012,9 +1037,20 @@ export async function getSummaryText(page: Page): Promise<string> {
   return bodyText(page, 8000);
 }
 
-/** The one and only place the real, irreversible final submission is fired from. */
+/** The one and only place the real, irreversible final submission is fired from. Confirmed live:
+ * an earlier step left mandatory-field validation errors unresolved (Lead Details) and the flow
+ * never actually advanced to Summary, yet this function still clicked *a* local "Submit" button
+ * that matched the generic selector - silently "succeeding" from the caller's perspective while
+ * firing no real submission at all. Verifying the Summary/Review signature first turns that into
+ * a loud, immediate failure instead. */
 export async function finalSubmit(page: Page): Promise<{ status: number; body: string | null }[]> {
   return test.step('Summary: final Submit', async () => {
+    const text = await bodyText(page, 1500);
+    const onSummary = text.includes('Lead Details') && text.includes('Mobile Number Verification') && text.includes('Summary');
+    if (!onSummary) {
+      throw new Error('finalSubmit called but the page does not show the Summary/Review signature - an earlier step likely failed to actually advance. Refusing to click Submit.');
+    }
+
     const submitCalls: { status: number; body: string | null }[] = [];
     page.on('response', async (res) => {
       if (res.url().includes('summary/submit') && res.request().method() === 'POST') {
