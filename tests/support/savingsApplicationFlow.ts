@@ -345,11 +345,42 @@ export async function waitForAndSubmitOtp(
 ): Promise<void> {
   const config: OtpConfig = typeof otp === 'string' ? { signalFile: otp } : otp;
   await test.step('Mobile Number Verification: submit OTP', async () => {
-    console.log(`WAITING_FOR_OTP via ${describeOtpSource(config)}`);
-    const code = await resolveOtp(config, timeoutMs);
-    await page.locator('input[name="mobotp"]').fill(code);
-    await page.waitForTimeout(500);
-    await outerSubmit(page);
+    // The app caps OTP entry at 3 attempts. We mirror that: if a submitted code is rejected
+    // (the OTP field stays on screen instead of the Account Type step appearing), we re-wait
+    // for a corrected code from the same source rather than blindly marching on with a wrong
+    // OTP — which previously hung the very next step (selectAccountType) for the full test
+    // timeout. A literal/endpoint source that keeps returning the same value is bounded by the
+    // 3-attempt cap so it can't loop forever.
+    const deadline = Date.now() + timeoutMs;
+    const otpField = page.locator('input[name="mobotp"]');
+    const maxAttempts = 3;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) throw new Error(`Timed out after ${Math.round(timeoutMs / 1000)}s waiting for a valid OTP.`);
+
+      console.log(`WAITING_FOR_OTP via ${describeOtpSource(config)} (attempt ${attempt}/${maxAttempts})`);
+      const code = await resolveOtp(config, remaining);
+      await otpField.fill('');
+      await otpField.fill(code);
+      await page.waitForTimeout(500);
+      await outerSubmit(page);
+
+      // Success == the OTP field leaves the DOM (screen advanced to Account Type). If it is
+      // still present after the submit settles, the code was wrong/expired — loop for a new one.
+      const verified = await otpField
+        .waitFor({ state: 'detached', timeout: 15000 })
+        .then(() => true)
+        .catch(() => false);
+      if (verified) {
+        console.log(`OTP accepted on attempt ${attempt}.`);
+        return;
+      }
+
+      console.log(`OTP "${code}" was rejected (attempt ${attempt}/${maxAttempts}); waiting for a corrected code...`);
+    }
+
+    throw new Error(`OTP rejected ${maxAttempts} times — the app's attempt limit is reached. Restart the flow with a fresh code.`);
   });
 }
 
