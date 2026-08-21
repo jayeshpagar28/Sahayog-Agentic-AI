@@ -1,19 +1,30 @@
 import { test, expect } from '@playwright/test';
 import { NormalApplicationPage } from '../pages/savings-application/NormalApplicationPage';
+import { SavingsApplicationDashboardPage } from '../pages/savings-application/SavingsApplicationDashboardPage';
+import { findDeepestPendingApplication } from '../support/savingsApplicationFlow';
 
-/** Resumes a real, already-in-progress application untouched by this project's live
- * exploration (SAH-1001-796/-805/-806 were all deliberately driven to real final
- * submission and are now locked/read-only in the Submitted tab). SAH-1001-795 sits at
- * eKYC Verification and was intentionally left alone in favor of starting fresh — read-only
- * navigation between its unlocked tabs is safe and does not modify any of its saved data. */
+/** Resumes whichever real, already-in-progress Normal application currently has the most
+ * stepper progress - read-only navigation between its unlocked tabs is safe and does not
+ * modify any of its saved data.
+ *
+ * Previously hardcoded a single fixture application id, but that is fragile on this shared
+ * live UAT environment: any Pending application's status can change at any time (moved to
+ * Submitted, Decisioned, or cancelled) by a real bank officer or workflow entirely outside
+ * this project's control - this spec had already needed a manual rotation once for exactly
+ * that reason (SAH-1001-795 moved to Decisioned). Picking the deepest-progressed candidate at
+ * run time self-heals across that churn instead of needing another rotation every time the
+ * current fixture moves on. */
 async function gotoCompletedApplication(page: import('@playwright/test').Page): Promise<void> {
-  await page.goto('/HOME');
-  await page.waitForLoadState('networkidle').catch(() => undefined);
-  await page.getByRole('button', { name: 'Savings Application' }).click();
-  await page.waitForURL(/\/UNPOSTED/);
-  await page.locator('.p-datatable-tbody tr').first().waitFor({ state: 'visible', timeout: 15000 });
-  const row = page.locator('.p-datatable-tbody tr', { hasText: 'SAH-1001-795' });
-  await row.locator('svg.fa-eye').click();
+  const applicationId = await findDeepestPendingApplication(page, '1001');
+
+  const dashboardPage = new SavingsApplicationDashboardPage(page);
+  await dashboardPage.search(applicationId);
+  await dashboardPage.tableBodyRows
+    .filter({ hasText: applicationId })
+    .first()
+    .waitFor({ state: 'visible' });
+  await dashboardPage.clickViewForRow(applicationId);
+
   await page.waitForURL(/\/applndetails/);
   await page.waitForTimeout(2000);
 }

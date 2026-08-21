@@ -1,5 +1,6 @@
 import * as path from 'path';
 import { test } from '@playwright/test';
+import { hasUnattendedOtp, type OtpSource } from '../support/signalFile';
 import {
   openNewApplication,
   findApplicationId,
@@ -34,9 +35,13 @@ import {
  * through real final Submit — driven against real UAT, not a mock. Unlike Individual, Silver
  * Joint DOES require Introducer Details.
  *
- * Manually-assisted: TWO applicants each need Mobile OTP, DigiLocker, and Liveliness (main
- * applicant + Joint co-applicant). See tests/support/savingsApplicationFlow.ts for how each is
- * handled. Skipped entirely in CI rather than silently omitted.
+ * TWO applicants each need Mobile OTP, DigiLocker, and Liveliness (main applicant + Joint
+ * co-applicant). DigiLocker/Liveliness are resolved automatically by polling each applicant's
+ * status - no human confirmation is asked for either. Each applicant's OTP follows the same
+ * unattended-capable priority chain as tests/10_STAFF_TS001/staff-account-creation.spec.ts:
+ * a literal env var -> a polled endpoint -> a local signal file (a human relays the SMS). The
+ * test skips in CI ONLY when either applicant lacks a configured unattended OTP source - never
+ * merely for being CI.
  */
 test.use({
   permissions: ['camera', 'geolocation'],
@@ -44,8 +49,25 @@ test.use({
   launchOptions: { args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] },
 });
 
-test.describe('SILVER_TS001 - Joint Account (Live, Manually-Assisted)', () => {
-  test.skip(!!process.env.CI, 'Manually-assisted OTP/DigiLocker/Liveliness relay - not runnable unattended in CI');
+const OTP_SOURCE: OtpSource = {
+  literal: process.env.SAHAYOG_SIL_JNT_OTP,
+  url: process.env.SAHAYOG_SIL_JNT_OTP_URL,
+  signalFile: path.join(process.cwd(), '.sil-jnt-otp-input.txt'),
+};
+const CO_OTP_SOURCE: OtpSource = {
+  literal: process.env.SAHAYOG_SIL_JNT_CO_OTP,
+  url: process.env.SAHAYOG_SIL_JNT_CO_OTP_URL,
+  signalFile: path.join(process.cwd(), '.sil-jnt-co-otp-input.txt'),
+};
+
+test.describe('SILVER_TS001 - Joint Account (Live)', () => {
+  test.skip(
+    !!process.env.CI && !(hasUnattendedOtp(OTP_SOURCE) && hasUnattendedOtp(CO_OTP_SOURCE)),
+    'Needs an OTP source for both applicants to run unattended in CI. Set SAHAYOG_SIL_JNT_OTP/' +
+      '_URL and SAHAYOG_SIL_JNT_CO_OTP/_URL; locally OTPs are read from .sil-jnt-otp-input.txt ' +
+      'and .sil-jnt-co-otp-input.txt. (DigiLocker consent and Liveliness are resolved by polling ' +
+      'application status, so they need no configuration.)',
+  );
 
   test('Silver Savings Account - Joint: full live journey through real final submission', async ({ page }) => {
     const applicantMobile = process.env.SAHAYOG_SIL_JNT_MOBILE;
@@ -56,8 +78,6 @@ test.describe('SILVER_TS001 - Joint Account (Live, Manually-Assisted)', () => {
     );
 
     test.setTimeout(50 * 60 * 1000);
-    const OTP_SIGNAL_FILE = path.join(process.cwd(), '.sil-jnt-otp-input.txt');
-    const CO_OTP_SIGNAL_FILE = path.join(process.cwd(), '.sil-jnt-co-otp-input.txt');
 
     const applicant: PersonData = {
       prefix: 'Mr',
@@ -101,7 +121,7 @@ test.describe('SILVER_TS001 - Joint Account (Live, Manually-Assisted)', () => {
       relationshipWithMain: 'Others',
       prefix: 'Mr',
       gender: 'Male',
-      email: 'coapplicant.silver@example.com',
+      email: 'coapplicantsilver@test.com',
       maritalStatus: 'Unmarried',
       fatherFirstName: 'Ramesh',
       fatherLastName: 'Kulkarni',
@@ -130,7 +150,7 @@ test.describe('SILVER_TS001 - Joint Account (Live, Manually-Assisted)', () => {
     await openNewApplication(page, 'silver');
 
     await sendMobileVerification(page, applicantMobile!);
-    await waitForAndSubmitOtp(page, OTP_SIGNAL_FILE);
+    await waitForAndSubmitOtp(page, OTP_SOURCE);
 
     await selectAccountType(page, 'joint');
 
@@ -143,7 +163,7 @@ test.describe('SILVER_TS001 - Joint Account (Live, Manually-Assisted)', () => {
 
     await fillAddressDetails(page, applicant.communicationAddress);
     await selectBranch(page, { change: false });
-    await fillBasicDetails(page, applicant, { includeRelationship: false, includeFundingMode: true, modeOfOperation: 'Self' });
+    await fillBasicDetails(page, applicant, { includeRelationship: false, includeFundingMode: true, modeOfOperation: 'Jointly' });
     await fillChequeDetails(page, applicant.chequeDetails ?? { chequeNumber: '', chequeDate: '', draweeBankName: '', ifscCode: '' });
     if (applicant.employmentInfo) {
       await fillEmploymentInfo(page, applicant.employmentInfo);
@@ -152,7 +172,7 @@ test.describe('SILVER_TS001 - Joint Account (Live, Manually-Assisted)', () => {
     await fillSecondaryApplicant(page, {
       kind: 'joint',
       data: coApplicant,
-      otpSignalFile: CO_OTP_SIGNAL_FILE,
+      otpSource: CO_OTP_SOURCE,
       appId,
     });
 

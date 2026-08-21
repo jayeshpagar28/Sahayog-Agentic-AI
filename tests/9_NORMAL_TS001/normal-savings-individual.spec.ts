@@ -1,5 +1,6 @@
 import * as path from 'path';
 import { test } from '@playwright/test';
+import { hasUnattendedOtp, type OtpSource } from '../support/signalFile';
 import {
   openNewApplication,
   findApplicationId,
@@ -36,9 +37,13 @@ import {
  * 2026-08-14, submitted for real with msgCode ENDMOD_200) before this dedicated script existed
  * — this file formalizes that same sequence as a standalone, independently-runnable test.
  *
- * Manually-assisted: Mobile OTP, Aadhaar DigiLocker authorization, and phone-based Liveliness
- * Verification all genuinely require a human. See tests/support/savingsApplicationFlow.ts for
- * how each is handled. Skipped entirely in CI rather than silently omitted.
+ * DigiLocker consent and Liveliness are resolved automatically by polling the application's own
+ * status after sending each link - no human confirmation is asked for either. The OTP is the
+ * only step requiring an explicit input, and follows the same unattended-capable priority chain
+ * as tests/10_STAFF_TS001/staff-account-creation.spec.ts: SAHAYOG_NOR_IND_OTP (literal) ->
+ * SAHAYOG_NOR_IND_OTP_URL (polled endpoint) -> .nor-ind-otp-input.txt (local signal file, a
+ * human relays the SMS). The test skips in CI ONLY when none of those is configured - never
+ * merely for being CI.
  */
 test.use({
   permissions: ['camera', 'geolocation'],
@@ -46,15 +51,25 @@ test.use({
   launchOptions: { args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] },
 });
 
-test.describe('NORMAL_TS001 - Individual Account (Live, Manually-Assisted)', () => {
-  test.skip(!!process.env.CI, 'Manually-assisted OTP/DigiLocker/Liveliness relay - not runnable unattended in CI');
+const OTP_SOURCE: OtpSource = {
+  literal: process.env.SAHAYOG_NOR_IND_OTP,
+  url: process.env.SAHAYOG_NOR_IND_OTP_URL,
+  signalFile: path.join(process.cwd(), '.nor-ind-otp-input.txt'),
+};
+
+test.describe('NORMAL_TS001 - Individual Account (Live)', () => {
+  test.skip(
+    !!process.env.CI && !hasUnattendedOtp(OTP_SOURCE),
+    'Needs an OTP source to run unattended in CI. Set SAHAYOG_NOR_IND_OTP or SAHAYOG_NOR_IND_OTP_URL; ' +
+      'locally the OTP is read from .nor-ind-otp-input.txt. (DigiLocker consent and Liveliness are ' +
+      'resolved by polling the application status, so they need no configuration.)',
+  );
 
   test('Normal Savings Account - Individual: full live journey through real final submission', async ({ page }) => {
     const applicantMobile = process.env.SAHAYOG_NOR_IND_MOBILE;
     test.skip(!applicantMobile, 'Set SAHAYOG_NOR_IND_MOBILE to a real, not-recently-used mobile number before running this flow.');
 
     test.setTimeout(30 * 60 * 1000);
-    const OTP_SIGNAL_FILE = path.join(process.cwd(), '.nor-ind-otp-input.txt');
 
     const applicant: PersonData = {
       prefix: 'Mr',
@@ -96,7 +111,7 @@ test.describe('NORMAL_TS001 - Individual Account (Live, Manually-Assisted)', () 
     await openNewApplication(page, 'normal');
 
     await sendMobileVerification(page, applicantMobile!);
-    await waitForAndSubmitOtp(page, OTP_SIGNAL_FILE);
+    await waitForAndSubmitOtp(page, OTP_SOURCE);
 
     await selectAccountType(page, 'individual');
 

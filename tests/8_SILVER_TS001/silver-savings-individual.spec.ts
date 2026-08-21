@@ -1,5 +1,6 @@
 import * as path from 'path';
 import { test } from '@playwright/test';
+import { hasUnattendedOtp, type OtpSource } from '../support/signalFile';
 import {
   openNewApplication,
   findApplicationId,
@@ -31,10 +32,13 @@ import {
  * path) / specs/SILVER_TS001-test-plan.md. This is the full end-to-end flow — Mobile
  * Verification through real final Submit — driven against real UAT, not a mock.
  *
- * Manually-assisted: Mobile OTP, Aadhaar DigiLocker authorization, and phone-based Liveliness
- * Verification all genuinely require a human (see tests/support/savingsApplicationFlow.ts for
- * how each is handled: OTP via a signal file, DigiLocker/Liveliness via status polling).
- * Skipped entirely in CI rather than silently omitted — see test.skip below.
+ * DigiLocker consent and Liveliness are resolved automatically by polling the application's own
+ * status after sending each link - no human confirmation is asked for either. The OTP is the
+ * only step requiring an explicit input, and follows the same unattended-capable priority chain
+ * as tests/10_STAFF_TS001/staff-account-creation.spec.ts: SAHAYOG_SIL_IND_OTP (literal) ->
+ * SAHAYOG_SIL_IND_OTP_URL (polled endpoint) -> .sil-ind-otp-input.txt (local signal file, a
+ * human relays the SMS). The test skips in CI ONLY when none of those is configured - never
+ * merely for being CI.
  */
 // Applicant Photo can fall back to live camera capture - grant permission and use a fake
 // device up front so a real camera permission prompt never blocks the page. Must be top-level
@@ -45,15 +49,25 @@ test.use({
   launchOptions: { args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] },
 });
 
-test.describe('SILVER_TS001 - Individual Account (Live, Manually-Assisted)', () => {
-  test.skip(!!process.env.CI, 'Manually-assisted OTP/DigiLocker/Liveliness relay - not runnable unattended in CI');
+const OTP_SOURCE: OtpSource = {
+  literal: process.env.SAHAYOG_SIL_IND_OTP,
+  url: process.env.SAHAYOG_SIL_IND_OTP_URL,
+  signalFile: path.join(process.cwd(), '.sil-ind-otp-input.txt'),
+};
+
+test.describe('SILVER_TS001 - Individual Account (Live)', () => {
+  test.skip(
+    !!process.env.CI && !hasUnattendedOtp(OTP_SOURCE),
+    'Needs an OTP source to run unattended in CI. Set SAHAYOG_SIL_IND_OTP or SAHAYOG_SIL_IND_OTP_URL; ' +
+      'locally the OTP is read from .sil-ind-otp-input.txt. (DigiLocker consent and Liveliness are ' +
+      'resolved by polling the application status, so they need no configuration.)',
+  );
 
   test('Silver Savings Account - Individual: full live journey through real final submission', async ({ page }) => {
     const applicantMobile = process.env.SAHAYOG_SIL_IND_MOBILE;
     test.skip(!applicantMobile, 'Set SAHAYOG_SIL_IND_MOBILE to a real, not-recently-used mobile number before running this flow.');
 
     test.setTimeout(30 * 60 * 1000);
-    const OTP_SIGNAL_FILE = path.join(process.cwd(), '.sil-ind-otp-input.txt');
 
     const applicant: PersonData = {
       prefix: 'Mr',
@@ -95,7 +109,7 @@ test.describe('SILVER_TS001 - Individual Account (Live, Manually-Assisted)', () 
     await openNewApplication(page, 'silver');
 
     await sendMobileVerification(page, applicantMobile!);
-    await waitForAndSubmitOtp(page, OTP_SIGNAL_FILE);
+    await waitForAndSubmitOtp(page, OTP_SOURCE);
 
     await selectAccountType(page, 'individual');
 
