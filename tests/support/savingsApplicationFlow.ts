@@ -304,6 +304,52 @@ export async function findApplicationId(page: Page, scheme: 'silver' | 'normal',
   return undefined;
 }
 
+/** Finds the Pending application (for the given scheme) with the most stepper progress, for
+ * tests that need to resume a real, far-progressed application to exercise its navigation -
+ * without depending on one specific hardcoded application ID. A hardcoded ID is fragile on this
+ * shared live UAT environment: any Pending application's status can change at any time (moved to
+ * Submitted, Decisioned, or cancelled) by a real bank officer or workflow entirely outside this
+ * project's control, and both Silver's and Normal's navigation specs have already needed manual
+ * fixture rotation more than once for exactly this reason. Picking the deepest-progressed
+ * candidate at run time self-heals across that churn instead of needing another rotation every
+ * time the current fixture moves on. */
+export async function findDeepestPendingApplication(page: Page, schemeCode: '1001' | '1002' | '1003'): Promise<string> {
+  interface ActivityRow {
+    schemeCode: string;
+    applicationId: string;
+    currentModuleSequence: number;
+  }
+  let candidates: ActivityRow[] = [];
+  const onResponse = async (res: import('@playwright/test').Response) => {
+    if (res.url().includes('/app/activity/list') && res.request().method() === 'POST') {
+      try {
+        const json = await res.json();
+        const content: ActivityRow[] = JSON.parse(json.content || '[]');
+        candidates = content.filter((row) => row.schemeCode === schemeCode);
+      } catch {
+        /* ignore unparsable/unrelated responses */
+      }
+    }
+  };
+
+  page.on('response', onResponse);
+  await page.goto('/HOME');
+  await page.waitForLoadState('networkidle').catch(() => undefined);
+  await page.getByRole('button', { name: 'Savings Application' }).click();
+  await page.waitForURL(/\/UNPOSTED/);
+  await page.waitForTimeout(2500);
+  page.off('response', onResponse);
+
+  if (candidates.length === 0) {
+    throw new Error(
+      `No Pending application found for scheme ${schemeCode} - these navigation tests need at least one real, far-progressed Pending application to resume. Create one (e.g. via the dedicated live-flow specs) and leave it unsubmitted.`,
+    );
+  }
+
+  const deepest = candidates.reduce((best, row) => (row.currentModuleSequence > best.currentModuleSequence ? row : best));
+  return deepest.applicationId;
+}
+
 // ---------------------------------------------------------------------------
 // Mobile Number Verification
 // ---------------------------------------------------------------------------
